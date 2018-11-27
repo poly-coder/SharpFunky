@@ -1,3 +1,4 @@
 {
-  "all": "src/**/*.fsproj"
+  "all": "src/**/*.fsproj",
+  "core": "src/**/SharpFunky.fsproj"
 }
