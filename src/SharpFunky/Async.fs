@@ -15,6 +15,20 @@ let notImpl() = delay notImpl
 let bind f ma = async.Bind(ma, f)
 let map f = bind (f >> return')
 
+let ofAsyncSeq (source: Async<'a> seq) = async {
+    use e = source.GetEnumerator()
+    let rec loop moved list = async {
+        if not moved then
+            return list |> Seq.rev
+        else
+            let! cur = e.Current
+            let list' = cur :: list
+            let moved' = e.MoveNext()
+            return! loop moved' list'
+    }
+    return! loop (e.MoveNext()) []
+}
+
 let ofTask ma = Async.AwaitTask ma
 let ofTaskVoid ma = Async.AwaitTask (ma: Task)
 let toTask ma = Async.StartAsTask ma

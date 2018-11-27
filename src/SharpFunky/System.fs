@@ -3,43 +3,101 @@ open System
 open System.Globalization
 open System.Text
 open System.Text.RegularExpressions
+open System.Resources
 
 module String =
-  let invariantCulture = CultureInfo.InvariantCulture
-  let comparer = StringComparer.InvariantCulture
-  let comparerIC = StringComparer.InvariantCultureIgnoreCase
-  let comparerO = StringComparer.Ordinal
-  let comparerOIC = StringComparer.OrdinalIgnoreCase
-  let comparerC = StringComparer.CurrentCulture
-  let comparerCIC = StringComparer.CurrentCultureIgnoreCase
+    let invariantCulture = CultureInfo.InvariantCulture
+    let comparer = StringComparer.InvariantCulture
+    let comparerIC = StringComparer.InvariantCultureIgnoreCase
+    let comparerO = StringComparer.Ordinal
+    let comparerOIC = StringComparer.OrdinalIgnoreCase
+    let comparerC = StringComparer.CurrentCulture
+    let comparerCIC = StringComparer.CurrentCultureIgnoreCase
 
-  let isNullOrEmpty = System.String.IsNullOrEmpty
-  let isNullOrWS = System.String.IsNullOrWhiteSpace
-  let isNotNullOrEmpty = isNullOrEmpty >> not
-  let isNotNullOrWS = isNullOrWS >> not
+    let isNullOrEmpty = System.String.IsNullOrEmpty
+    let isNullOrWS = System.String.IsNullOrWhiteSpace
+    let isNotNullOrEmpty = isNullOrEmpty >> not
+    let isNotNullOrWS = isNullOrWS >> not
 
-  let toBase64 bytes = bytes |> Convert.ToBase64String
-  let fromBase64 str = str |> Convert.FromBase64String
-  let fromBase64Opt = Option.catch fromBase64
-  let fromBase64Res = Result.catch fromBase64
+    let toBase64 bytes = bytes |> Convert.ToBase64String
+    let fromBase64 str = str |> Convert.FromBase64String
+    let fromBase64Opt = Option.catch fromBase64
+    let fromBase64Res = Result.catch fromBase64
 
-  let toEncoding (encoding: Encoding) (str: string) = str |> encoding.GetBytes
-  let fromEncoding (encoding: Encoding) bytes = bytes |> encoding.GetString
+    let toEncoding (encoding: Encoding) (str: string) = str |> encoding.GetBytes
+    let fromEncoding (encoding: Encoding) bytes = bytes |> encoding.GetString
 
-  let toUtf8 = toEncoding Encoding.UTF8
-  let fromUtf8 = fromEncoding Encoding.UTF8
-  let toUtf7 = toEncoding Encoding.UTF7
-  let fromUtf7 = fromEncoding Encoding.UTF7
-  let toUtf32 = toEncoding Encoding.UTF32
-  let fromUtf32 = fromEncoding Encoding.UTF32
-  let toUnicode = toEncoding Encoding.Unicode
-  let fromUnicode = fromEncoding Encoding.Unicode
-  let toAscii = toEncoding Encoding.ASCII
-  let fromAscii = fromEncoding Encoding.ASCII
+    let toUtf8 = toEncoding Encoding.UTF8
+    let fromUtf8 = fromEncoding Encoding.UTF8
+    let toUtf7 = toEncoding Encoding.UTF7
+    let fromUtf7 = fromEncoding Encoding.UTF7
+    let toUtf32 = toEncoding Encoding.UTF32
+    let fromUtf32 = fromEncoding Encoding.UTF32
+    let toUnicode = toEncoding Encoding.Unicode
+    let fromUnicode = fromEncoding Encoding.Unicode
+    let toAscii = toEncoding Encoding.ASCII
+    let fromAscii = fromEncoding Encoding.ASCII
 
-  let isMatch regex =
-    let expression = Regex(regex)
-    fun (s: string) -> Prelude.isNotNull s && expression.IsMatch(s)
+    let isMatch regex =
+        let expression = Regex(regex)
+        fun (s: string) -> Prelude.isNotNull s && expression.IsMatch(s)
+
+    module Options =
+        let inline internal catch' fn : _ -> _ option = Option.catch fn
+        let inline internal nocatch' fn : _ -> _ option = fun x -> x |> fn |> Some
+
+        let fromBase64 = catch' fromBase64
+        let toBase64 x = nocatch' toBase64 x
+        let toEncoding encoding = catch' (toEncoding encoding)
+        let fromEncoding encoding = catch' (fromEncoding encoding)
+        let toUtf8 = catch' toUtf8
+        let fromUtf8 = catch' fromUtf8
+        let toUtf7 = catch' toUtf7
+        let fromUtf7 = catch' fromUtf7
+        let toUtf32 = catch' toUtf32
+        let fromUtf32 = catch' fromUtf32
+        let toUnicode = catch' toUnicode
+        let fromUnicode = catch' fromUnicode
+        let toAscii = catch' toAscii
+        let fromAscii = catch' fromAscii
+
+    module Results =
+        let inline internal catch' fn : ResultFn<_, _, _> = Result.catch fn
+        let inline internal nocatch' fn : ResultFn<_, _, _> = fun x -> x |> fn |> Result.ok
+
+        let fromBase64 = catch' fromBase64
+        let toBase64 x = nocatch' toBase64 x
+        let toEncoding encoding = catch' (toEncoding encoding)
+        let fromEncoding encoding = catch' (fromEncoding encoding)
+        let toUtf8 = catch' toUtf8
+        let fromUtf8 = catch' fromUtf8
+        let toUtf7 = catch' toUtf7
+        let fromUtf7 = catch' fromUtf7
+        let toUtf32 = catch' toUtf32
+        let fromUtf32 = catch' fromUtf32
+        let toUnicode = catch' toUnicode
+        let fromUnicode = catch' fromUnicode
+        let toAscii = catch' toAscii
+        let fromAscii = catch' fromAscii
+
+    module Trials =
+        let inline internal catch' fn : TrialFn<_, _, _> = Trial.catch fn
+        let inline internal nocatch' fn : TrialFn<_, _, _> = fun x -> x |> fn |> Trial.success
+
+        let fromBase64 = catch' fromBase64
+        let toBase64 x = nocatch' toBase64 x
+        let toEncoding encoding = catch' (toEncoding encoding)
+        let fromEncoding encoding = catch' (fromEncoding encoding)
+        let toUtf8 = catch' toUtf8
+        let fromUtf8 = catch' fromUtf8
+        let toUtf7 = catch' toUtf7
+        let fromUtf7 = catch' fromUtf7
+        let toUtf32 = catch' toUtf32
+        let fromUtf32 = catch' fromUtf32
+        let toUnicode = catch' toUnicode
+        let fromUnicode = catch' fromUnicode
+        let toAscii = catch' toAscii
+        let fromAscii = catch' fromAscii
 
 module Byte =
   let minValue = System.Byte.MinValue
@@ -152,3 +210,38 @@ module Disposable =
         createInstance dispose
 
     let noop = createInstance ignore
+
+module ResX =
+    open System.Reflection
+    open System.Runtime.InteropServices
+    open System.IO
+
+    type IResourceData = 
+        abstract culture: CultureInfo option with get, set
+        abstract getString: string * ?culture: CultureInfo -> string
+        abstract getObject: string * ?culture: CultureInfo -> obj
+        abstract getStream: string * ?culture: CultureInfo -> UnmanagedMemoryStream
+
+    let fromResourceManager (rm: ResourceManager) =
+        let culture = ref None
+        let getCulture given = 
+            match given with
+            | Some c -> c
+            | None -> 
+                match !culture with
+                | Some c -> c
+                | None -> CultureInfo.CurrentCulture
+        { new IResourceData with
+            member __.culture 
+                with get() = !culture
+                and set(c) = culture := c 
+            member __.getString(name, culture) = rm.GetString(name, getCulture culture)
+            member __.getObject(name, culture) = rm.GetObject(name, getCulture culture)
+            member __.getStream(name, culture) = rm.GetStream(name, getCulture culture)
+        }
+
+    let from assembly baseName =
+        fromResourceManager <| ResourceManager(baseName, assembly)
+
+    let fromThis baseName =
+        from (Assembly.GetCallingAssembly()) baseName

@@ -46,6 +46,8 @@ module Trial =
     let ofChoice = function Choice1Of2 a -> success a | Choice2Of2 e -> failure e
     let toChoice a = a |> matchesSuccess Choice1Of2 Choice2Of2
 
+    let getOrInvalidOp ma = matchesSuccess id (fun _ -> invalidOp "Unexpected errors") ma
+
     let toSeq a = a |> matchesSuccess Seq.singleton (konst Seq.empty)
     let toMessages a = a |> matches (fun es _ -> es) id
     let toWarns a = a |> matches (fun es _ -> es) (konst [])
@@ -114,7 +116,7 @@ module Trial =
     let trial = TrialAndBuilder.Builder()
 
     module TrialOrBuilder =
-        let zero<'e> : Trial<_, 'e> = success()
+        let zero<'a> : Trial<'a, _> = failure()
         let inline return' a = success a
         let inline returnFrom ma = ma
         let inline delay f = Monads.delay f

@@ -18,9 +18,9 @@ module AsyncResult =
     let ignoreAll ma = ma |> matchesSync ignore ignore
     let ignore ma = ma |> map ignore
 
-    let catch fn: AsyncResult<_, _> = async {
+    let catch fn x: AsyncResult<_, _> = async {
         try
-            let! a = fn()
+            let! a = fn x
             return! ok a
         with exn ->
             return! error exn
@@ -55,8 +55,6 @@ module AsyncResult =
     }
 
     module Builder =
-        open System.Threading.Tasks
-
         let zero<'e> : AsyncResult<_, 'e> = ok()
         let inline delay f = f
         let inline run f = f()
@@ -71,29 +69,15 @@ module AsyncResult =
         type ResultBuilder() =
             member this.Delay f = delay f
             member this.Run f = run f
-
             member this.Zero() = zero
             member this.Return(a) = return' a
             member this.ReturnFrom ma = returnFrom ma
-            //member this.ReturnFrom ma = returnFrom (ofResult ma)
-            //member this.ReturnFrom (ma: Task<Result<_, _>>) = returnFrom (ofTask ma)
-
             member this.Bind(ma, f) = bind f ma
-            //member this.Bind(ma, f) = bind (f >> ofResult) ma
-            //member this.Bind(ma, f) = bind (f >> ofTask) ma
-
             member this.Combine(mu, mb: _ -> AsyncResult<_, _>) = this.Bind(mu, mb)
-            //member this.Combine(mu, mb: _ -> Result<_, _>) = this.Bind(mu, mb)
-            //member this.Combine(mu, mb: _ -> Task<_>) = this.Bind(mu, mb)
-
             member this.TryWith(ma, handler) = tryWith handler ma
-
             member this.TryFinally(ma, compensation) = tryFinally compensation ma
-
             member this.Using(res, body) = using body res
-
             member this.While(guard, body) = while' body guard
-
             member this.For(sequence, body) = for' body sequence
 
     let asyncResult = Builder.ResultBuilder()

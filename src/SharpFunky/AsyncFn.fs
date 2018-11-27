@@ -18,6 +18,8 @@ module AsyncFn =
     let toTask ma = ma |> Monads.applyFn Async.toTask
     let toTaskVoid ma = ma |> Monads.applyFn Async.toTaskVoid
 
+    let ofFn fn = fn >> Async.return'
+
     let bindTask f = applyFn (Async.bindTask f)
     let bindTaskVoid f = applyFn (Async.bindTaskVoid f)
     let mapTask f = applyFn (Async.mapTask f)
