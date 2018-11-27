@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
-    <Version>0.0.1</Version>
+    <Version>0.0.3</Version>
     <Authors>Iskander Sierra</Authors>
     <Company>poly-coder</Company>
     <PackageId>SharpFunky.Mongo</PackageId>
@@ -20,6 +20,10 @@
   <ItemGroup>
     <ProjectReference Include="..\SharpFunky.Abstractions\SharpFunky.Abstractions.fsproj" />
     <ProjectReference Include="..\SharpFunky\SharpFunky.fsproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Update="FSharp.Core" Version="4.5.4" />
   </ItemGroup>
 
 </Project>
