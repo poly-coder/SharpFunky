@@ -15,6 +15,7 @@ module AsyncResult =
     let bindError (f: _ -> AsyncResult<_, _>) = matches ok f
     let map f = bind (f >> ok)
     let mapError f = bindError (f >> error)
+    let mapErrorAsync f = bindError (f >> Async.return')
     let ignoreAll ma = ma |> matchesSync ignore ignore
     let ignore ma = ma |> map ignore
 

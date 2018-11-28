@@ -42,6 +42,7 @@ module AsyncTrial =
     let mapMessages f = matchesAsTrial (fun es a -> f es |> Async.bind (fun es' -> warns es' a)) (f |> AsyncFn.bind failures)
     let mapMessagesSync f = f |> AsyncFn.ofFn |> mapMessages
     let mapMessage f = mapMessages (Seq.map f >> Async.ofAsyncSeq >> Async.map Seq.toList)
+    let mapMessageSync f = f |> AsyncFn.ofFn |> mapMessage
 
     let catch fn x: AsyncTrial<_, _> = async {
         try
