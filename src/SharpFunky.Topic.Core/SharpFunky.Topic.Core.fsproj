@@ -1,0 +1,24 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="Message.fs" />
+    <Compile Include="Serialization.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MsgPack.Cli" Version="1.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SharpFunky\SharpFunky.fsproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Update="FSharp.Core" Version="4.5.4" />
+  </ItemGroup>
+
+</Project>
