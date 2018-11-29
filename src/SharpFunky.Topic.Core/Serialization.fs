@@ -37,19 +37,19 @@ module MsgPackV1 =
         let packThis fn (pk: Packer) = fn pk
         let unpackOrExn fn (upk: Unpacker) = fn upk |> Option.ofTryOp |> Option.get
 
-        let packNull = packThis <| fun pk -> pk.PackNull()
+        let packNull pk = packThis (fun pk -> pk.PackNull()) pk
         let packString s = packThis <| fun pk -> pk.PackString(s)
-        let unpackString = unpackOrExn <| fun u -> u.ReadString()
+        let unpackString pk = unpackOrExn (fun u -> u.ReadString()) pk
         let packBool v = packThis <| fun pk -> pk.Pack(v: bool)
-        let unpackBool = unpackOrExn <| fun u -> u.ReadBoolean()
+        let unpackBool pk = unpackOrExn (fun u -> u.ReadBoolean()) pk
         let packByte v = packThis <| fun pk -> pk.Pack(v: byte)
-        let unpackByte = unpackOrExn <| fun u -> u.ReadByte()
+        let unpackByte pk = unpackOrExn (fun u -> u.ReadByte()) pk
         let packInt v = packThis <| fun pk -> pk.Pack(v: int)
-        let unpackInt = unpackOrExn <| fun u -> u.ReadInt32()
+        let unpackInt pk = unpackOrExn (fun u -> u.ReadInt32()) pk
         let packLong v = packThis <| fun pk -> pk.Pack(v: int64)
-        let unpackLong = unpackOrExn <| fun u -> u.ReadInt64()
+        let unpackLong pk = unpackOrExn (fun u -> u.ReadInt64()) pk
         let packFloat v = packThis <| fun pk -> pk.Pack(v: float)
-        let unpackFloat = unpackOrExn <| fun u -> u.ReadDouble()
+        let unpackFloat pk = unpackOrExn (fun u -> u.ReadDouble()) pk
         
         let packDateTime (v: DateTime) = packByte (byte v.Kind) >> packLong (v.Ticks)
         let unpackDateTime upk =
@@ -81,6 +81,16 @@ module MsgPackV1 =
         let unpackMapWith unpackKey unpackValue =
             unpackArrayWith (fun upk -> unpackKey upk, unpackValue upk)
             >> Map.ofSeq
+
+        let packOptionWith opt packValue =
+            match opt with
+            | None -> packBool false
+            | Some v -> packBool true >> packValue v
+
+        let unpackOptionWith unpackValue upk =
+            match unpackBool upk with
+            | false -> None
+            | true -> unpackValue upk |> Some
 
         let packStrings value = packSeqWith value packString
         let packDict value = packMapWith value packString packString
@@ -116,7 +126,7 @@ module MsgPackV1 =
             | MetaDictCode -> unpackDict upk |> MetaDict
             | MetaMapCode -> unpackMap upk |> MetaMap
             | _ -> invalidOp (sprintf "Unknown meta value code: %d" code)
-        and unpackList upk = upk |> unpackListWith unpackMetaValue
+        and unpackList upk = upk |> unpackArrayWith unpackMetaValue |> Array.toList
         and unpackMap upk = upk |> unpackMapWith unpackString unpackMetaValue
 
     open Impl
@@ -126,4 +136,11 @@ module MsgPackV1 =
 
     let packMessage message =
         packMessageMeta (Message.Meta.get message)
-        >> packArray (Message.Data.get message)
+        >> packOptionWith (Message.Data.get message) (fun data -> packSeqWith data packByte)
+
+    let unpackMessage upk =
+        let meta = unpackMessageMeta upk
+        let data = unpackOptionWith (unpackArrayWith unpackByte) upk
+        Message.empty 
+        |> Message.Meta.set meta
+        |> Message.Data.set data

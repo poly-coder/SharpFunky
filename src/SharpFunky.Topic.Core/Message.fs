@@ -28,7 +28,8 @@ module Message =
     module Data =
         let get m = m.data
         let upd fn m = m |> get |> fn |> fun v -> { m with data = v }
-        let set value = upd (konst <| Some value)
+        let set value = upd (konst value)
+        let put value = upd (konst <| Some value)
         let clear = upd (konst None)
 
     module Meta =
