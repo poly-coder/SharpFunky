@@ -24,6 +24,7 @@ type Message = {
 module Message =
 
     let empty = { meta = Map.empty; data = None }
+    let create meta data = { meta = meta; data = data }
 
     module Data =
         let get m = m.data

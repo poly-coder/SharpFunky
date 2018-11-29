@@ -9,6 +9,8 @@
     <Compile Include="Serialization.fs" />
   </ItemGroup>
 
+  <ItemGroup />
+
   <ItemGroup>
     <PackageReference Include="MsgPack.Cli" Version="1.0.0" />
   </ItemGroup>
