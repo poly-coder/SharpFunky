@@ -1,36 +1,25 @@
-﻿open System
+namespace SharpFunky.TopicsServer
+
+open System
+open System.Collections.Generic
+open System.IO
+open System.Linq
+open System.Threading.Tasks
 open Microsoft.AspNetCore
-open Microsoft.Extensions.DependencyInjection
-open Microsoft.Extensions.Configuration
-open Microsoft.AspNetCore.Builder
 open Microsoft.AspNetCore.Hosting
-open Giraffe
+open Microsoft.Extensions.Configuration
+open Microsoft.Extensions.Logging
 
-let configureServices (services: IServiceCollection) =
-    do services.AddGiraffe() |> ignore
+module Program =
+    let exitCode = 0
 
-let configureApp (app: IApplicationBuilder) =
-    let env = app.ApplicationServices.GetService<IHostingEnvironment>()
-    if env.IsDevelopment() then
-        app.UseDeveloperExceptionPage() |> ignore
-        
-    do app.UseGiraffe <| WebApp.webApp app.ApplicationServices
+    let CreateWebHostBuilder args =
+        WebHost
+            .CreateDefaultBuilder(args)
+            .UseStartup<Startup>();
 
-let runServer args =
-    let hostConfig =
-        ConfigurationBuilder()
-            .AddJsonFile("hosting.json", optional=true, reloadOnChange=false)
-            .AddCommandLine(args: string[])
-            .Build()
-    do WebHost
-        .CreateDefaultBuilder(args)
-        .UseConfiguration(hostConfig)
-        .ConfigureServices(configureServices)
-        .Configure(Action<_> configureApp)
-        .Build()
-        .Run()
+    [<EntryPoint>]
+    let main args =
+        CreateWebHostBuilder(args).Build().Run()
 
-[<EntryPoint>]
-let main argv =
-    do runServer argv
-    0
+        exitCode

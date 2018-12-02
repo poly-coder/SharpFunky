@@ -10,9 +10,9 @@
     <PackageReference Include="FsCheck" Version="2.13.0" />
     <PackageReference Include="FsUnit" Version="3.4.0" />
     <PackageReference Include="MsgPack.Cli" Version="1.0.0" />
-    <PackageReference Include="nunit" Version="3.10.1" />
-    <PackageReference Include="NUnit3TestAdapter" Version="3.10.0" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.8.0" />
+    <PackageReference Include="nunit" Version="3.11.0" />
+    <PackageReference Include="NUnit3TestAdapter" Version="3.11.2" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.9.0" />
     <PackageReference Include="Unquote" Version="4.0.0" />
   </ItemGroup>
 

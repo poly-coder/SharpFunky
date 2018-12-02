@@ -185,5 +185,3 @@ module MsgPackV1 =
             member __.unpack unpacker = unpackMessage unpacker
             member __.unpackMeta unpacker = unpackMessageMeta unpacker
         }
-
-

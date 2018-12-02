@@ -5,6 +5,8 @@ type Trial<'a, 'e> =
     | Failure of 'e list
 
 module Trial =
+    open System
+
     let warns es a = Success(a, es)
     let warnsSeq es a = warns (es |> List.ofSeq) a
     let warn e a = warns [e] a
@@ -47,6 +49,12 @@ module Trial =
     let toChoice a = a |> matchesSuccess Choice1Of2 Choice2Of2
 
     let getOrInvalidOp ma = matchesSuccess id (fun _ -> invalidOp "Unexpected errors") ma
+    let getOrRaise ma =
+        matchesSuccess id (fun es -> 
+            match es with
+            | [] -> invalidOp "Unexpected errors"
+            | [exn] -> raise exn
+            | _ -> raise <| AggregateException(es)) ma
 
     let toSeq a = a |> matchesSuccess Seq.singleton (konst Seq.empty)
     let toMessages a = a |> matches (fun es _ -> es) id

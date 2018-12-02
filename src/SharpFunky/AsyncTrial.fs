@@ -54,6 +54,7 @@ module AsyncTrial =
 
     let ofTrial ma: AsyncTrial<_, _> = ma |> Async.return'
     
+    let ofAsync ma = ma |> Async.map Trial.success
     let ofResult ma = ma |> Async.map Trial.ofResult
     let ofOption ma = ma |> Async.map Trial.ofOption
     let ofChoice ma = ma |> Async.map Trial.ofChoice

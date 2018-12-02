@@ -13,6 +13,8 @@ module Result =
     let mapError f = bindError (f >> Error)
 
     let catch fn x = try fn x |> ok with exn -> error exn
+    let getOrFail ma = ma |> matches id (fun _ -> invalidOp "Unknown error")
+    let getOrRaise ma = ma |> matches id (fun exn -> raise exn)
     
     let ofOption = function Some a -> ok a | _ -> error ()
     let ofOptionError = function Some a -> error a | _ -> ok ()
