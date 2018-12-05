@@ -53,6 +53,9 @@ open FSharp.Control
 type TopicController (factory: ITopicServiceFactory) =
     inherit ControllerBase()
 
+    let messageIdHeader = "X-MessageId"
+    let customHeaderPrefix = "X-Message-"
+
     let readStream (stream: Stream) = async {
         use mem = new MemoryStream()
         do! stream.CopyToAsync(mem) |> Async.ofTaskVoid
@@ -60,11 +63,11 @@ type TopicController (factory: ITopicServiceFactory) =
     }
 
     member private this.ExtractMessageId(msg: Message) = Trial.trial {
-        match this.Request.Headers.TryGetValue("X-MessageID") |> Option.ofTryOp with
+        match this.Request.Headers.TryGetValue(messageIdHeader) |> Option.ofTryOp with
         | Some vals when vals.Count = 1 ->
             return msg |> Message.MessageId.set vals.[0]
         | Some _ ->
-            return! Trial.failure (ModelError("X-MessageID", "Must be a single value"))
+            return! Trial.failure (ModelError(messageIdHeader, "Must be a single value"))
         | None ->
             return msg |> Message.MessageId.generate
     }
@@ -106,21 +109,28 @@ type TopicController (factory: ITopicServiceFactory) =
         | None -> return Trial.failure (NotFound (sprintf "Topic %s not found" topicId))
     }
 
-    [<HttpPost("{id}")>]
-    member this.Post(id: string) =
-        this.FindTopic id
+    [<HttpGet("{topicId}/status")>]
+    member this.GetStatus(topicId: string) =
+        this.FindTopic topicId
+        |> AsyncTrial.bind (fun topic -> topic.getStatus () |> AsyncTrial.ofAsync)
+        |> Async.map (asActionResult this.ModelState)
+        |> Async.toTask
+
+    [<HttpPost("{topicId}")>]
+    member this.Post(topicId: string) =
+        this.FindTopic topicId
         |> AsyncTrial.bind (fun topic ->
             Message.empty
                 |> this.ExtractMessageId
                 |> Trial.map this.ExtractContentType
                 |> Trial.map this.ExtractExtraMeta
-                |> Trial.map (this.ExtractCustomHeaders "X-Message-")
+                |> Trial.map (this.ExtractCustomHeaders customHeaderPrefix)
                 |> AsyncTrial.ofTrial
                 |> AsyncTrial.bind this.ExtractData
                 |> AsyncTrial.bind (fun msg ->
                     let msgSeq = AsyncSeq.singleton msg
                     topic.publish msgSeq
-                    |> Async.map (konst msg)
+                    |> AsyncSeq.tryFirst
                     |> AsyncTrial.ofAsync
                 )
         )

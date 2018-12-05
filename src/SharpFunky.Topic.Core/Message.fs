@@ -21,6 +21,10 @@ type Message = {
     data: byte[] option
 }
 
+type MessageId = string
+type TopicSequence = int64
+type Timestamp = DateTime
+
 module Message =
 
     let empty = { meta = Map.empty; data = None }
@@ -241,26 +245,26 @@ module Message =
         let map key fn = bind key (fn >> Some)
 
     module MessageId =
-        let internal gen() = Guid.NewGuid().ToString("N").ToLowerInvariant()
+        let internal gen(): MessageId = Guid.NewGuid().ToString("N").ToLowerInvariant()
         let key = "_MID"
-        let tryGet = MetaString.tryGet key
-        let set id = MetaString.put key id
-        let generateIfMissingWith = MetaString.ensure key id
+        let tryGet msg: MessageId option = MetaString.tryGet key msg
+        let set (id: MessageId) msg = MetaString.put key id msg
+        let generateIfMissingWith (gen: unit -> MessageId) = MetaString.ensure key id gen
         let generateIfMissing = generateIfMissingWith gen
         let generateWith fn = fn() |> set
         let generate msg = msg |> set (gen())
 
     module TopicSequence =
         let key = "_SEQ"
-        let tryGet = MetaLong.tryGet key
-        let set id = MetaLong.put key id
+        let tryGet msg: TopicSequence option = MetaLong.tryGet key msg
+        let set (id: TopicSequence) msg = MetaLong.put key id msg
 
     module Timestamp =
-        let internal gen() = DateTime.UtcNow
+        let internal gen(): Timestamp = DateTime.UtcNow
         let key = "_TMS"
-        let tryGet = MetaDate.tryGet key
-        let set id = MetaDate.put key id
-        let generateIfMissingWith = MetaDate.ensure key id
+        let tryGet msg: Timestamp option = MetaDate.tryGet key msg
+        let set (id: Timestamp) = MetaDate.put key id
+        let generateIfMissingWith (gen: unit -> Timestamp) = MetaDate.ensure key id gen
         let generateIfMissing = generateIfMissingWith gen
         let generateWith fn = fn() |> set
         let generate msg = msg |> set (gen())

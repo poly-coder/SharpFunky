@@ -8,8 +8,15 @@ module AsyncResult =
     let ok v = Result.Ok v |> async.Return
     let error e = Result.Error e |> async.Return
 
-    let matches f fe = Async.bind (Result.matches f fe)
+    let matches f fe x = async {
+        try
+            let! a = x
+            return! Result.matches f fe a
+        with exn ->
+            return! fe exn
+    }
     let matchesSync f fe = matches (f >> Async.return') (fe >> Async.return')
+    let delayed fn = async.Delay(fn)
     
     let bind (f: _ -> AsyncResult<_, _>) = matches f (Error >> Async.return')
     let bindError (f: _ -> AsyncResult<_, _>) = matches ok f
@@ -18,14 +25,14 @@ module AsyncResult =
     let mapErrorAsync f = bindError (f >> Async.return')
     let ignoreAll ma = ma |> matchesSync ignore ignore
     let ignore ma = ma |> map ignore
+    let catch fn x: AsyncResult<_, _> =
+        delayed(fun () -> fn x) |> matches ok error
+    let catchAsync fn = catch (fn >> Async.map Result.ok)
+    let catchResult fn = catch (fn >> Async.return')
 
-    let catch fn x: AsyncResult<_, _> = async {
-        try
-            let! a = fn x
-            return! ok a
-        with exn ->
-            return! error exn
-    }
+    let catched x = catch id x
+    let catchedAsync x = catchAsync id x
+    let catchedResult x = catchResult id x
 
     let ofAsync ma: AsyncResult<_, _> = async {
         try

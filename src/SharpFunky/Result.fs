@@ -20,6 +20,8 @@ module Result =
     let ofOptionError = function Some a -> error a | _ -> ok ()
     let toOption = function Ok a -> Some a | _ -> None
     let toOptionError = function Error a -> Some a | _ -> None
+    let ofResultOption = function Ok(Some x) -> Ok x | _ -> Error()
+    let ofOptionResult = function Some(Ok x) -> Ok x | _ -> Error()
 
     let ofChoice = function Choice1Of2 a -> ok a | Choice2Of2 e -> error e
     let toChoice = function Ok a -> Choice1Of2 a | Error e -> Choice2Of2 e

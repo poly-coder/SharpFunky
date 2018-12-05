@@ -28,6 +28,7 @@
     <Compile Include="AsyncTrial.fs" />
     <Compile Include="AsyncTrialFn.fs" />
     <Compile Include="System.fs" />
+    <Compile Include="MBox.fs" />
     <Compile Include="Validation.fs" />
   </ItemGroup>
 

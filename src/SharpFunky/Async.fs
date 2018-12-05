@@ -34,6 +34,7 @@ let ofTaskVoid ma = Async.AwaitTask (ma: Task)
 let toTask ma = Async.StartAsTask ma
 let toTaskVoid ma = toTask ma |> fun t -> t :> Task
 
+let inline start a = Async.Start a
 let inline startAsTask ma = ma |> Async.StartAsTask
 let inline startAsTaskVoid ma = ma |> startAsTask |> fun t -> t :> Task
 

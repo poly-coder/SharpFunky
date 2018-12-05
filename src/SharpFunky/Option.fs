@@ -16,6 +16,9 @@ module Option =
     let toSeq ma = matches Seq.singleton (konst Seq.empty) ma
     let ofPredicate predicate v = if predicate v then Some v else None
     let ofTryOp (ok, v) = if ok then Some v else None
+    let ofResult = function Ok x -> Some x | _ -> None
+    let ofResultOption = function Ok(Some x) -> Some x | _ -> None
+    let ofOptionResult = function Some(Ok x) -> Some x | _ -> None
 
     module Infix =
         let inline (>>=) ma f = ma |> Option.bind f
