@@ -162,30 +162,26 @@ module InMemory =
                         return! loop state
                     }
 
-                    let readMessages (readOptions: ReadMessagesOptions) ch = async {
-                        let seqSrc = AsyncSeqSrc.create()
-
+                    let readMessageUntilCurrent startIndex readOptions seqSrc =
                         let rec readLoop index = async {
                             if readOptions.cancellationToken.IsCancellationRequested then
                                 seqSrc |> AsyncSeqSrc.error (OperationCanceledException())
-                                return ()
-                            if index < int64 state.messages.Count then
+                                return None
+                            elif index < int64 state.messages.Count then
                                 seqSrc |> AsyncSeqSrc.put (state.messages.[int index] |> FoundMessage)
                                 return! readLoop (index + 1L)
                             else
                                 if not readOptions.keepOpen then
                                     seqSrc |> AsyncSeqSrc.close
-                                    return ()
+                                    return None
                                 else
                                     seqSrc |> AsyncSeqSrc.put CurrentEndOfTopic
-                                    let reader: ReaderState = {
-                                        seqSrc = seqSrc
-                                        options = readOptions
-                                        nextIndex = index
-                                    }
-                                    mb.Post(IncludeReader reader)
-                                    return ()
+                                    return Some index
                         }
+                        readLoop startIndex
+
+                    let readMessages (readOptions: ReadMessagesOptions) ch = async {
+                        let seqSrc = AsyncSeqSrc.create()
 
                         let startIndex =
                             let count = state.messages.Count |> int64
@@ -195,7 +191,19 @@ module InMemory =
                             | ReadFromNext -> count
                             | ReadFromSequence ind -> max 0L (min count ind)
                         
-                        do readLoop startIndex |> Async.start
+                        async {
+                            match! readMessageUntilCurrent startIndex readOptions seqSrc with
+                            | Some nextIndex ->
+                                let reader: ReaderState = {
+                                    seqSrc = seqSrc
+                                    options = readOptions
+                                    nextIndex = nextIndex
+                                }
+                                do mb.Post(IncludeReader reader)
+                            | None ->
+                                do ()
+                        }
+                        |> Async.start
 
                         do seqSrc
                             |> AsyncSeqSrc.toAsyncSeq
@@ -205,7 +213,18 @@ module InMemory =
                     }
 
                     let updateCurrentReaders state = async {
-                        
+                        let! readers' =
+                            state.readers
+                            |> AsyncSeq.ofSeq
+                            |> AsyncSeq.collect (fun reader ->
+                                readMessageUntilCurrent reader.nextIndex reader.options reader.seqSrc
+                                |> Async.map (function
+                                    | Some nextIndex -> AsyncSeq.singleton { reader with nextIndex = nextIndex }
+                                    | None -> AsyncSeq.empty)
+                                |> AsyncSeq.ofAsync)
+                            |> AsyncSeq.toListAsync
+                        let state' = { state with readers = readers' }
+                        return! loop state'
                     }
 
                     let postSingleMessage message ch = async {

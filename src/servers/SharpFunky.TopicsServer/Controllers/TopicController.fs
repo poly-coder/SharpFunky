@@ -136,3 +136,12 @@ type TopicController (factory: ITopicServiceFactory) =
         )
         |> Async.map (asActionResult this.ModelState)
         |> Async.toTask
+
+    [<HttpGet("{topicId}/read-all")>]
+    member this.ReadAll(topicId: string) =
+        this.FindTopic topicId
+        |> AsyncTrial.map (fun topic ->
+            topic.read ReadStartPosition.empty
+            |> AsyncSeq.toListAsync)
+        |> Async.map (asActionResult this.ModelState)
+        |> Async.toTask
