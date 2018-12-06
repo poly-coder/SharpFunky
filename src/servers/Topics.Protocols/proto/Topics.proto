@@ -1,0 +1,38 @@
+﻿syntax = "proto3";
+
+package topics.protocols;
+
+message ProtoMessage {
+  bytes data = 1;
+  map<string, string> meta = 2;
+  string messageId = 3;
+  int64 sequence = 4;
+  int64 timestamp = 5;
+}
+
+message PublishProtoMessage {
+  bytes data = 1;
+  map<string, string> meta = 2;
+  string messageId = 3;
+}
+
+message PublishedProtoMessage {
+  bool isError = 1;
+  string messageId = 2;
+  int64 sequence = 3;
+  int64 timestamp = 4;
+  string errorCode = 5;
+  string errorMessage = 6;
+}
+
+message FetchProtoMessages {
+  int32 maxCount = 1;
+  int32 maxBytes = 2;
+  int32 maxTimeMs = 3;
+  int64 fromSequence = 4;
+  int64 fromTimestamp = 5;
+}
+
+service TopicService {
+  rpc PublishMessage(PublishProtoMessage) returns (PublishedProtoMessage);
+}
