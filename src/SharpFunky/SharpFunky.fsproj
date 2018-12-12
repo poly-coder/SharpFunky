@@ -23,6 +23,7 @@
     <Compile Include="Trial.fs" />
     <Compile Include="TrialFn.fs" />
     <Compile Include="AsyncOption.fs" />
+    <Compile Include="AsyncOptionFn.fs" />
     <Compile Include="AsyncResult.fs" />
     <Compile Include="AsyncResultFn.fs" />
     <Compile Include="AsyncTrial.fs" />
