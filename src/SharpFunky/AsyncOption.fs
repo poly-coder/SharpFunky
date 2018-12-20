@@ -10,10 +10,22 @@ module AsyncOption =
     let ofOption (a: Option<'a>) : AsyncOption<'a> =
         a |> async.Return
 
+    let matches fs fn x = async {
+        try
+            let! a = x
+            return! Option.matches fs fn a
+        with _ ->
+            return! fn ()
+    }
+    let matchesSync f fe = matches (f >> Async.return') (fe >> Async.return')
+    let delayed fn = async.Delay(fn)
+
     let bind f ma = Async.bind (Option.matches f (konst none)) ma
     let bindOfAsync f ma = bind (f >> ofAsync) ma
     let bindOfOption f ma = bind (f >> ofOption) ma
     let map f ma = bind (f >> some) ma
+
+    let get (ma: AsyncOption<_>) = ma |> Async.map Option.get
 
     let filter (f: 'a -> Async<bool>) (ma: AsyncOption<'a>) : AsyncOption<'a> = async {
         let! a = ma

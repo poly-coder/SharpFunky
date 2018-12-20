@@ -284,11 +284,3 @@ function main() {
 }
 
 main()
-
-// exec(`msbuild .\\SharpFunky\\SharpFunky.fsproj /t:pack /p:Configuration=Release`)
-//   .then(data => {
-//     console.log('Success with ', data)
-//   })
-//   .catch(data => {
-//     console.log('Failed with ', data)
-//   })
