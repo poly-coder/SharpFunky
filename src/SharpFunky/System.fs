@@ -111,6 +111,7 @@ module Byte =
     System.Byte.Parse(str, String.invariantCulture)
   let tryParse str =
     System.Byte.TryParse(str, NumberStyles.Integer, String.invariantCulture) |> Option.ofTryOp
+  let optLens = OptLens.parser "" tryParse toString
 
 module Int16 =
   let minValue = System.Int16.MinValue
@@ -124,6 +125,7 @@ module Int16 =
     System.Int16.Parse(str, String.invariantCulture)
   let tryParse str =
     System.Int16.TryParse(str, NumberStyles.Integer, String.invariantCulture) |> Option.ofTryOp
+  let optLens = OptLens.parser "" tryParse toString
 
 module Int32 =
   let minValue = System.Int32.MinValue
@@ -137,6 +139,7 @@ module Int32 =
     System.Int32.Parse(str, String.invariantCulture)
   let tryParse str =
     System.Int32.TryParse(str, NumberStyles.Integer, String.invariantCulture) |> Option.ofTryOp
+  let optLens = OptLens.parser "" tryParse toString
 
 module Int64 =
   let minValue = System.Int64.MinValue
@@ -150,6 +153,8 @@ module Int64 =
     System.Int64.Parse(str, String.invariantCulture)
   let tryParse str =
     System.Int64.TryParse(str, NumberStyles.Integer, String.invariantCulture) |> Option.ofTryOp
+  let optLens = OptLens.parser "" tryParse toString
+
 
 module Single =
   let minValue = System.Single.MinValue
@@ -163,6 +168,7 @@ module Single =
     System.Single.Parse(str, String.invariantCulture)
   let tryParse str =
     System.Single.TryParse(str, NumberStyles.Integer, String.invariantCulture) |> Option.ofTryOp
+  let optLens = OptLens.parser "" tryParse toString
 
 module Double =
   let minValue = System.Double.MinValue
@@ -176,6 +182,7 @@ module Double =
     System.Double.Parse(str, String.invariantCulture)
   let tryParse str =
     System.Double.TryParse(str, NumberStyles.Integer, String.invariantCulture) |> Option.ofTryOp
+  let optLens = OptLens.parser "" tryParse toString
 
 module Decimal =
   let minValue = System.Decimal.MinValue
@@ -189,6 +196,7 @@ module Decimal =
     System.Decimal.Parse(str, String.invariantCulture)
   let tryParse str =
     System.Decimal.TryParse(str, NumberStyles.Integer, String.invariantCulture) |> Option.ofTryOp
+  let optLens = OptLens.parser "" tryParse toString
 
 module Disposable =
     open System.Threading

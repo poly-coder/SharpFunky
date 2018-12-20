@@ -232,7 +232,7 @@ const commands = {
       })
   }),
   pack: packProjects,
-  publish: (args) => publishCommand(args),
+  publish: (args) => publishCommand(args, 'nuget.org'),
   'publish-local': (args) => publishCommand(args, 'Locals')
 }
 

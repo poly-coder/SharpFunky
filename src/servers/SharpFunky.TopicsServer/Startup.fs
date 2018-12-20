@@ -14,12 +14,12 @@ open SharpFunky
 open SharpFunky.Topic.Core
 
 type Startup private () =
-    let createTopicServiceFactory () =
-        let createTopic _ = async.Delay (fun () -> InMemory.TopicService.create() |> Some |> Async.return')
-        let opts: Delegated.TopicServiceFactory.Options = {
-            createTopic = createTopic
-        }
-        Delegated.TopicServiceFactory.create opts
+    //let createTopicServiceFactory () =
+    //    let createTopic _ = async.Delay (fun () -> InMemory.TopicService.create() |> Some |> Async.return')
+    //    let opts: Delegated.TopicServiceFactory.Options = {
+    //        createTopic = createTopic
+    //    }
+    //    Delegated.TopicServiceFactory.create opts
 
     new (configuration: IConfiguration) as this =
         Startup() then
@@ -28,7 +28,7 @@ type Startup private () =
     // This method gets called by the runtime. Use this method to add services to the container.
     member this.ConfigureServices(services: IServiceCollection) =
         // Add framework services.
-        services.AddSingleton<ITopicServiceFactory>(fun _ -> createTopicServiceFactory()) |> ignore
+        //services.AddSingleton<ITopicServiceFactory>(fun _ -> createTopicServiceFactory()) |> ignore
         services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_1) |> ignore
 
     // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
