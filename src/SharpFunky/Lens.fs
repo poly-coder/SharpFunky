@@ -20,7 +20,7 @@ module Lens =
     let identity<'a> : Lens<'a, 'a> = cons' id konst
 
     let compose l1 l2 =
-        cons (get l1 >> get l2) (upd l1 >> upd l2)
+        cons (get l1 >> get l2) (upd l2 >> upd l1)
 
     let mapKey key =
         cons' (Map.find key) (Map.add key)

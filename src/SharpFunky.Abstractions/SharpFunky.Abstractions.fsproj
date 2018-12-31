@@ -10,9 +10,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="ServiceFactory.fs" />
     <Compile Include="Conversion.fs" />
     <Compile Include="Messaging.fs" />
     <Compile Include="KeyValueStore.fs" />
+    <Compile Include="EventStore.fs" />
   </ItemGroup>
 
   <ItemGroup>

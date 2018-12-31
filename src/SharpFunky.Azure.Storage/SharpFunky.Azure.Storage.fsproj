@@ -13,11 +13,13 @@
     <Compile Include="AzureStorage.fs" />
     <Compile Include="KeyValueStore.AzureTables.fs" />
     <Compile Include="KeyValueStore.AzureBlobs.fs" />
+    <Compile Include="EventStore.fs" />
     <Compile Include="MessageSubscriber.AzureQueues.fs" />
     <Compile Include="MessagePublisher.AzureQueues.fs" />
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="TaskBuilder.fs" Version="2.1.0" />
     <PackageReference Include="WindowsAzure.Storage" Version="9.3.3" />
   </ItemGroup>
 

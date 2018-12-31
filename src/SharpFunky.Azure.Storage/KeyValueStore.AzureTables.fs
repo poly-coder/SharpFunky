@@ -4,6 +4,7 @@ open SharpFunky
 open SharpFunky.Conversion
 open SharpFunky.Storage
 open Microsoft.WindowsAzure.Storage.Table
+open SharpFunky.AzureStorage
 
 type Options<'a> = {
     table: CloudTable
@@ -25,27 +26,30 @@ module Options =
             dataColumnName = "__Data"
             updateKey = fun _ v -> v
         }
-    let withRowKeyPrefix value = fun opts -> { opts with rowKeyPrefix = value }
-    let withUpdateKey value = fun opts -> { opts with updateKey = value }
-    let withDataColumnName value = fun opts -> { opts with dataColumnName = value }
+    let table<'a> : Lens<Options<'a>, _> =
+        Lens.cons' (fun opts -> opts.table) (fun value opts -> { opts with table = value })
+    let converter<'a> : Lens<Options<'a>, _> =
+        Lens.cons' (fun opts -> opts.converter) (fun value opts -> { opts with converter = value })
+    let partitionKey<'a> : Lens<Options<'a>, _> =
+        Lens.cons' (fun opts -> opts.partitionKey) (fun value opts -> { opts with partitionKey = value })
+    let rowKeyPrefix<'a> : Lens<Options<'a>, _> =
+        Lens.cons' (fun opts -> opts.rowKeyPrefix) (fun value opts -> { opts with rowKeyPrefix = value })
+    let updateKey<'a> : Lens<Options<'a>, _> =
+        Lens.cons' (fun opts -> opts.updateKey) (fun value opts -> { opts with updateKey = value })
+    let dataColumnName<'a> : Lens<Options<'a>, _> =
+        Lens.cons' (fun opts -> opts.dataColumnName) (fun value opts -> { opts with dataColumnName = value })
 
 let private prKeysSet = ["PartitionKey"; "RowKey"] |> Set.ofList
 let fromOptions opts =
-    let partitionCond =
-        TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, opts.partitionKey)
+    let partitionCond = Tables.Query.PartitionKey.eq opts.partitionKey
 
-    let getRowKey key =
-        sprintf "%s%s" opts.rowKeyPrefix key
+    let getRowKey = sprintf "%s%s" opts.rowKeyPrefix
 
-    let makeQuery key =
-        let rowKey = getRowKey key
-        let filter =
-            TableQuery.CombineFilters(
-                partitionCond,
-                TableOperators.And,
-                TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.Equal, rowKey)
-            )
-        TableQuery().Where(filter)
+    let makeQuery =
+        getRowKey
+        >> Tables.Query.RowKey.eq
+        >> Tables.Query.and' partitionCond
+        >> TableQuery().Where
 
     let extractData (item: DynamicTableEntity) =
         let data = ref None
