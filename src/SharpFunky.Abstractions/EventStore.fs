@@ -120,16 +120,54 @@ module PersistedEvent =
     let metaLong key = OptLens.compose (OptLens.ofLens meta) (MetaData.optLong key)
     let metaStrings key = OptLens.compose (OptLens.ofLens meta) (MetaData.optStrings key)
 
+type EventStoreStatus = {
+    isFrozen: bool
+    nextSequence: int64
+}
+
+[<RequireQualifiedAccess>]
+module EventStoreStatus =
+    let empty = {
+        isFrozen = false
+        nextSequence = 0L
+    }
+    let isFrozen = Lens.cons' (fun s -> s.isFrozen) (fun v s -> { s with isFrozen = v })
+    let nextSequence = Lens.cons' (fun s -> s.nextSequence) (fun v s -> { s with nextSequence = v })
+
 type GetEventsRequest = {
-    fromSequence: int64
+    fromSequence: int64 option
     limit: int option
     reverse: bool
 }
 
+[<RequireQualifiedAccess>]
+module GetEventsRequest =
+    let empty = {
+        fromSequence = None
+        limit = None
+        reverse = false
+    }
+    let fromSequence = Lens.cons' (fun s -> s.fromSequence) (fun v s -> { s with fromSequence = v })
+    let limit = Lens.cons' (fun s -> s.limit) (fun v s -> { s with limit = v })
+    let reverse = Lens.cons' (fun s -> s.reverse) (fun v s -> { s with reverse = v })
+
 type GetEventsResponse = {
     events: PersistedEvent list
-    nextSequence: int64 option
+    nextSequence: int64
 }
 
-type IKeyEventGetter =
-    abstract get: GetEventsRequest -> AsyncResult<GetEventsResponse, exn>
+[<RequireQualifiedAccess>]
+module GetEventsResponse =
+    let empty = {
+        events = []
+        nextSequence = 0L
+    }
+    let events = Lens.cons' (fun s -> s.events) (fun v s -> { s with events = v })
+    let nextSequence = Lens.cons' (fun s -> s.nextSequence) (fun v s -> { s with nextSequence = v })
+
+type IEventStoreReader =
+    abstract status: unit -> AsyncResult<EventStoreStatus, exn>
+    abstract read: GetEventsRequest -> AsyncResult<GetEventsResponse, exn>
+
+type IEventStore =
+    inherit IEventStoreReader

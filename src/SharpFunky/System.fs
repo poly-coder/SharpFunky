@@ -19,6 +19,11 @@ module String =
     let isNotNullOrEmpty = isNullOrEmpty >> not
     let isNotNullOrWS = isNullOrWS >> not
 
+    let empty = String.Empty
+    let startsWith prefix (s: string) = s.StartsWith(prefix)
+    let substring startIndex length (s: string) = s.Substring(startIndex, length)
+    let substringFrom startIndex (s: string) = s.Substring(startIndex)
+
     let toBase64 bytes = bytes |> Convert.ToBase64String
     let fromBase64 str = str |> Convert.FromBase64String
     let fromBase64Opt = Option.catch fromBase64

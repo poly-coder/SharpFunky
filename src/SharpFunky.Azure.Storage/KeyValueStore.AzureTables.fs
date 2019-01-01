@@ -39,49 +39,40 @@ module Options =
     let dataColumnName<'a> : Lens<Options<'a>, _> =
         Lens.cons' (fun opts -> opts.dataColumnName) (fun value opts -> { opts with dataColumnName = value })
 
-let private prKeysSet = ["PartitionKey"; "RowKey"] |> Set.ofList
 let fromOptions opts =
-    let partitionCond = Tables.Query.PartitionKey.eq opts.partitionKey
-
     let getRowKey = sprintf "%s%s" opts.rowKeyPrefix
 
-    let makeQuery =
-        getRowKey
-        >> Tables.Query.RowKey.eq
-        >> Tables.Query.and' partitionCond
-        >> TableQuery().Where
-
     let extractData (item: DynamicTableEntity) =
-        let data = ref None
-        let map = ref Map.empty
-        let err = ref None
+        let mutable data = None
+        let mutable map = Map.empty
+        let mutable err = None
         for p in item.Properties do
-            match !err with
+            match err with
             | Some _ -> ()
             | None ->
                 match p.Key with
-                | key when Set.contains key prKeysSet -> ()
+                | key when Set.contains key Tables.SystemKeys -> ()
                 | key when key = opts.dataColumnName ->
-                    match !data with
+                    match data with
                     | None when p.Value.PropertyType = EdmType.String ->
-                        data := Some p.Value.StringValue
+                        data <- Some p.Value.StringValue
                     | None ->
-                        err := sprintf "Data column type should be string but %A found" p.Value.PropertyType |> exn |> Some
+                        err <- sprintf "Data column type should be string but %A found" p.Value.PropertyType |> exn |> Some
                     | Some _ ->
-                        err := sprintf "Duplicate data column" |> exn |> Some
+                        err <- sprintf "Duplicate data column" |> exn |> Some
                 | key ->
                     match p.Value.PropertyType with
                     | EdmType.String ->
-                        map := !map |> Map.add key p.Value.StringValue
+                        map <- map |> Map.add key p.Value.StringValue
                     | propType ->
-                        err := sprintf "%s column type should be string but %A found" key propType |> exn |> Some
-        match !err with
+                        err <- sprintf "%s column type should be string but %A found" key propType |> exn |> Some
+        match err with
         | None ->
-            match !data with
+            match data with
             | None -> 
                 "Data column not found" |> exn |> Result.error
             | Some data ->
-                (data, !map) |> Result.ok
+                (data, map) |> Result.ok
         | Some e -> Result.error e
         
     let insertData meta data (item: DynamicTableEntity) =
@@ -89,34 +80,42 @@ let fromOptions opts =
             let prop = EntityProperty.GeneratePropertyForString(v)
             item.Properties.Add(k, prop)
         item.Properties.Add(opts.dataColumnName, EntityProperty.GeneratePropertyForString(data))
+        item
 
     let get key =
         asyncResult {
-            let query = makeQuery key
-            let! segment = opts.table.ExecuteQuerySegmentedAsync(query, null) |> AsyncResult.ofTask
-            match segment.Results |> Seq.tryHead with
-            | None -> return None
-            | Some item ->
-                let! data, meta = extractData item |> AsyncResult.ofResult
-                let! result = opts.converter.convertBack(meta, data)
+            let! retrieveResult =
+                opts.table
+                |> Tables.execute (Tables.retrieve opts.partitionKey key)
+                |> AsyncResult.ofTask
+            match retrieveResult.Result with
+            | :? DynamicTableEntity as entity ->
+                let! data, meta =
+                    extractData entity
+                    |> AsyncResult.ofResult
+                let! result =
+                    opts.converter.convertBack(meta, data)
                 return Some result
+            | _ -> return None
         }
 
     let put key value =
         asyncResult {
-            let value' = opts.updateKey key value
-            let! meta, data = opts.converter.convert value'
-            let item = DynamicTableEntity()
-            do insertData meta data item 
-            let op = TableOperation.InsertOrReplace(item)
-            do! opts.table.ExecuteAsync(op) |> AsyncResult.ofTaskVoid
+            let! meta, data =
+                value
+                |> opts.updateKey key
+                |> opts.converter.convert
+            do! DynamicTableEntity()
+                |> insertData meta data
+                |> Tables.insertOrReplace
+                |> opts.table.ExecuteAsync
+                |> AsyncResult.ofTaskVoid
         }
         
-    let del key =
-        asyncResult {
-            let item = DynamicTableEntity(opts.partitionKey, getRowKey key)
-            let op = TableOperation.Delete(item)
-            do! opts.table.ExecuteAsync(op) |> AsyncResult.ofTaskVoid
-        }
+    let del =
+        getRowKey
+        >> Tables.deleteOf opts.partitionKey
+        >> opts.table.ExecuteAsync
+        >> AsyncResult.ofTaskVoid
 
     KeyValueStore.createInstance get put del

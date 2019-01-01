@@ -16,6 +16,7 @@ module Lens =
     let upd (Lens(_, u)) = u
     let set (Lens(_, u)) : LensSetter<_, _> = konst >> u
     let updWith lens = upd lens |> flip
+    let setOpt lens = function Some value -> set lens value | _ -> id
 
     let identity<'a> : Lens<'a, 'a> = cons' id konst
 

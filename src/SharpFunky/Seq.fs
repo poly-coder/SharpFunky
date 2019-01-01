@@ -8,6 +8,7 @@ type OpScanWith<'a> =
     | BreakWith of 'a
 
 let bind f = Seq.collect f
+let bindOpt f = bind (f >> function Some x -> [x] | None -> [])
 let ignore ma = Seq.map ignore ma
 
 let enumerator (e: seq<'a>) = e.GetEnumerator()
