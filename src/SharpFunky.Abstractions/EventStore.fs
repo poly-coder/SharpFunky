@@ -85,7 +85,7 @@ type EventData = {
 
 [<RequireQualifiedAccess>]
 module EventData =
-    let empty = {
+    let empty: EventData = {
         meta = Map.empty
         data = EmptyEvent
     }
@@ -97,21 +97,18 @@ module EventData =
 type PersistedEvent = {
     streamId: string
     sequence: int64
-    timestamp: int64
     event: EventData
 }
 
 [<RequireQualifiedAccess>]
 module PersistedEvent =
-    let empty = {
+    let empty: PersistedEvent = {
         streamId = ""
         sequence = 0L
-        timestamp = 0L
         event = EventData.empty
     }
     let streamId = Lens.cons' (fun (e: PersistedEvent) -> e.streamId) (fun v e -> { e with streamId = v })
     let sequence = Lens.cons' (fun (e: PersistedEvent) -> e.sequence) (fun v e -> { e with sequence = v })
-    let timestamp = Lens.cons' (fun (e: PersistedEvent) -> e.timestamp) (fun v e -> { e with timestamp = v })
     let event = Lens.cons' (fun (e: PersistedEvent) -> e.event) (fun v e -> { e with event = v })
     let data = Lens.compose event EventData.data
     let dataBinary = OptLens.compose (OptLens.ofLens data) EventContent.optBinary
@@ -121,23 +118,6 @@ module PersistedEvent =
     let metaLong key = OptLens.compose (OptLens.ofLens meta) (MetaData.optLong key)
     let metaStrings key = OptLens.compose (OptLens.ofLens meta) (MetaData.optStrings key)
 
-type PersistedEventInfo = {
-    streamId: string
-    sequence: int64
-    timestamp: int64
-}
-
-[<RequireQualifiedAccess>]
-module PersistedEventInfo =
-    let empty = {
-        streamId = ""
-        sequence = 0L
-        timestamp = 0L
-    }
-    let streamId = Lens.cons' (fun (e: PersistedEventInfo) -> e.streamId) (fun v e -> { e with streamId = v })
-    let sequence = Lens.cons' (fun (e: PersistedEventInfo) -> e.sequence) (fun v e -> { e with sequence = v })
-    let timestamp = Lens.cons' (fun (e: PersistedEventInfo) -> e.timestamp) (fun v e -> { e with timestamp = v })
-
 type EventStreamStatus = {
     isFrozen: bool
     nextSequence: int64
@@ -145,7 +125,7 @@ type EventStreamStatus = {
 
 [<RequireQualifiedAccess>]
 module EventStreamStatus =
-    let empty = {
+    let empty: EventStreamStatus = {
         isFrozen = false
         nextSequence = 0L
     }
@@ -160,7 +140,7 @@ type ReadEventsRequest = {
 
 [<RequireQualifiedAccess>]
 module ReadEventsRequest =
-    let empty = {
+    let empty: ReadEventsRequest = {
         fromSequence = None
         limit = None
         reverse = false
@@ -176,7 +156,7 @@ type ReadEventsResponse = {
 
 [<RequireQualifiedAccess>]
 module ReadEventsResponse =
-    let empty = {
+    let empty: ReadEventsResponse = {
         events = []
         nextSequence = 0L
     }
@@ -189,23 +169,20 @@ type WriteEventsRequest = {
 
 [<RequireQualifiedAccess>]
 module WriteEventsRequest =
-    let empty = {
+    let empty: WriteEventsRequest = {
         events = []
     }
     let events = Lens.cons' (fun s -> s.events) (fun v s -> { s with events = v })
 
 type WriteEventsResponse = {
-    events: PersistedEventInfo list
     nextSequence: int64
 }
 
 [<RequireQualifiedAccess>]
 module WriteEventsResponse =
-    let empty = {
-        events = []
+    let empty: WriteEventsResponse = {
         nextSequence = 0L
     }
-    let events = Lens.cons' (fun s -> s.events) (fun v s -> { s with events = v })
     let nextSequence = Lens.cons' (fun s -> s.nextSequence) (fun v s -> { s with nextSequence = v })
 
 type IEventStreamReader =

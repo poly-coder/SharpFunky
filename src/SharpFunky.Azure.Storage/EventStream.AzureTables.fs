@@ -1,6 +1,7 @@
 ﻿module SharpFunky.Storage.EventStore.AzureTables
 
 open System
+open System.Threading.Tasks
 open SharpFunky
 open SharpFunky.Storage
 open SharpFunky.AzureStorage.Tables
@@ -27,7 +28,7 @@ module Options =
     let partitionKey = Lens.cons' (fun opts -> opts.partitionKey) (fun value opts -> { opts with partitionKey = value })
 
 
-let fromOptions (opts: Options) =
+let createEventStream (opts: Options) =
     let eventDataTypeName = "DataType"
     let eventDataTypeBinary = "binary"
     let eventDataTypeString = "string"
@@ -143,7 +144,6 @@ let fromOptions (opts: Options) =
         PersistedEvent.empty
         |> Lens.set PersistedEvent.streamId entity.PartitionKey
         |> Lens.set PersistedEvent.sequence (getEventRowKey entity.RowKey)
-        |> Lens.set PersistedEvent.timestamp (entity.Timestamp.UtcTicks)
         |> Lens.set PersistedEvent.event (eventDataFromEntity entity)
 
     let getStatusOrDefaultTask () = task {
@@ -160,7 +160,8 @@ let fromOptions (opts: Options) =
                 { status with isFrozen = true }
                 |> createStatusToEntity
             statusEntity.ETag <- etag
-            let! replaceResult = statusEntity |> replace |> execute
+            // let! _ = replace statusEntity |> execute
+            let! result = opts.table |> execute (replace statusEntity)
             return ()
         | true -> return ()
     }
@@ -214,7 +215,8 @@ let fromOptions (opts: Options) =
                 |> createStatusToEntity
             statusEntity.ETag <- etag
             statusEntity |> replace |> batch.Add
-            let! batchResult = opts.table |> executeBatch batch
+            let! _ = opts.table |> executeBatch batch
+            return { nextSequence = nextSequence }
             
         } |> AsyncResult.ofTask
 
@@ -230,7 +232,7 @@ let createEventStreamFromPartitions table =
             table = table
             partitionKey = partitionKey
         }
-        fromOptions opts
+        createEventStream opts
 
     { new IEventStreamFactory with
         member this.create partitionKey = create partitionKey }
