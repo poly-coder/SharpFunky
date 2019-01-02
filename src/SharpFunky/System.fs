@@ -24,6 +24,16 @@ module String =
     let substring startIndex length (s: string) = s.Substring(startIndex, length)
     let substringFrom startIndex (s: string) = s.Substring(startIndex)
 
+    let trim (s: string) = s.Trim()
+    let trimWithAny chars (s: string) = s.Trim(chars |> Seq.toArray)
+    let trimWith char (s: string) = s.Trim([| char |])
+    let trimStart (s: string) = s.TrimStart()
+    let trimStartWithAny chars (s: string) = s.TrimStart(chars |> Seq.toArray)
+    let trimStartWith char (s: string) = s.TrimStart([| char |])
+    let trimEnd (s: string) = s.TrimEnd()
+    let trimEndWithAny chars (s: string) = s.TrimEnd(chars |> Seq.toArray)
+    let trimEndWith char (s: string) = s.TrimEnd([| char |])
+
     let toBase64 bytes = bytes |> Convert.ToBase64String
     let fromBase64 str = str |> Convert.FromBase64String
     let fromBase64Opt = Option.catch fromBase64

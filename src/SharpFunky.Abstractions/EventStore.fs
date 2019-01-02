@@ -1,31 +1,12 @@
 ﻿namespace SharpFunky.Storage
 
 open SharpFunky
+open SharpFunky.Services
 
 type EventContent =
     | EmptyEvent
     | BinaryEvent of byte[]
     | StringEvent of string
-
-type MetaValue =
-    | MetaNull
-    | MetaString of string
-    | MetaLong of int64
-    | MetaStrings of string list
-
-type MetaData = Map<string, MetaValue>
-
-type EventData = {
-    meta: MetaData
-    data: EventContent
-}
-
-type PersistedEvent = {
-    aggregateId: string
-    sequence: int64
-    timestamp: int64
-    event: EventData
-}
 
 [<RequireQualifiedAccess>]
 module EventContent =
@@ -37,6 +18,12 @@ module EventContent =
         OptLens.cons'
             (function StringEvent v -> Some v | _ -> None)
             (fun value _ -> match value with Some v -> StringEvent v | _ -> EmptyEvent)
+
+type MetaValue =
+    | MetaNull
+    | MetaString of string
+    | MetaLong of int64
+    | MetaStrings of string list
 
 [<RequireQualifiedAccess>]
 module MetaValue =
@@ -83,11 +70,18 @@ module MetaValue =
             )
     let mapStrings = mapStringsDef []
 
+type MetaData = Map<string, MetaValue>
+
 [<RequireQualifiedAccess>]
 module MetaData =
     let optString key = OptLens.compose (OptLens.mapKey key) (MetaValue.optString)
     let optLong key = OptLens.compose (OptLens.mapKey key) (MetaValue.optLong)
     let optStrings key = OptLens.compose (OptLens.mapKey key) (MetaValue.optStrings)
+
+type EventData = {
+    meta: MetaData
+    data: EventContent
+}
 
 [<RequireQualifiedAccess>]
 module EventData =
@@ -100,15 +94,22 @@ module EventData =
     let dataString = OptLens.compose (OptLens.ofLens data) EventContent.optString
     let meta = Lens.cons' (fun (e: EventData) -> e.meta) (fun v e -> { e with meta = v })
 
+type PersistedEvent = {
+    streamId: string
+    sequence: int64
+    timestamp: int64
+    event: EventData
+}
+
 [<RequireQualifiedAccess>]
 module PersistedEvent =
     let empty = {
-        aggregateId = ""
+        streamId = ""
         sequence = 0L
         timestamp = 0L
         event = EventData.empty
     }
-    let aggregateId = Lens.cons' (fun (e: PersistedEvent) -> e.aggregateId) (fun v e -> { e with aggregateId = v })
+    let streamId = Lens.cons' (fun (e: PersistedEvent) -> e.streamId) (fun v e -> { e with streamId = v })
     let sequence = Lens.cons' (fun (e: PersistedEvent) -> e.sequence) (fun v e -> { e with sequence = v })
     let timestamp = Lens.cons' (fun (e: PersistedEvent) -> e.timestamp) (fun v e -> { e with timestamp = v })
     let event = Lens.cons' (fun (e: PersistedEvent) -> e.event) (fun v e -> { e with event = v })
@@ -120,13 +121,30 @@ module PersistedEvent =
     let metaLong key = OptLens.compose (OptLens.ofLens meta) (MetaData.optLong key)
     let metaStrings key = OptLens.compose (OptLens.ofLens meta) (MetaData.optStrings key)
 
-type EventStoreStatus = {
+type PersistedEventInfo = {
+    streamId: string
+    sequence: int64
+    timestamp: int64
+}
+
+[<RequireQualifiedAccess>]
+module PersistedEventInfo =
+    let empty = {
+        streamId = ""
+        sequence = 0L
+        timestamp = 0L
+    }
+    let streamId = Lens.cons' (fun (e: PersistedEventInfo) -> e.streamId) (fun v e -> { e with streamId = v })
+    let sequence = Lens.cons' (fun (e: PersistedEventInfo) -> e.sequence) (fun v e -> { e with sequence = v })
+    let timestamp = Lens.cons' (fun (e: PersistedEventInfo) -> e.timestamp) (fun v e -> { e with timestamp = v })
+
+type EventStreamStatus = {
     isFrozen: bool
     nextSequence: int64
 }
 
 [<RequireQualifiedAccess>]
-module EventStoreStatus =
+module EventStreamStatus =
     let empty = {
         isFrozen = false
         nextSequence = 0L
@@ -134,14 +152,14 @@ module EventStoreStatus =
     let isFrozen = Lens.cons' (fun s -> s.isFrozen) (fun v s -> { s with isFrozen = v })
     let nextSequence = Lens.cons' (fun s -> s.nextSequence) (fun v s -> { s with nextSequence = v })
 
-type GetEventsRequest = {
+type ReadEventsRequest = {
     fromSequence: int64 option
     limit: int option
     reverse: bool
 }
 
 [<RequireQualifiedAccess>]
-module GetEventsRequest =
+module ReadEventsRequest =
     let empty = {
         fromSequence = None
         limit = None
@@ -151,13 +169,13 @@ module GetEventsRequest =
     let limit = Lens.cons' (fun s -> s.limit) (fun v s -> { s with limit = v })
     let reverse = Lens.cons' (fun s -> s.reverse) (fun v s -> { s with reverse = v })
 
-type GetEventsResponse = {
+type ReadEventsResponse = {
     events: PersistedEvent list
     nextSequence: int64
 }
 
 [<RequireQualifiedAccess>]
-module GetEventsResponse =
+module ReadEventsResponse =
     let empty = {
         events = []
         nextSequence = 0L
@@ -165,9 +183,45 @@ module GetEventsResponse =
     let events = Lens.cons' (fun s -> s.events) (fun v s -> { s with events = v })
     let nextSequence = Lens.cons' (fun s -> s.nextSequence) (fun v s -> { s with nextSequence = v })
 
-type IEventStoreReader =
-    abstract status: unit -> AsyncResult<EventStoreStatus, exn>
-    abstract read: GetEventsRequest -> AsyncResult<GetEventsResponse, exn>
+type WriteEventsRequest = {
+    events: EventData list
+}
 
-type IEventStore =
-    inherit IEventStoreReader
+[<RequireQualifiedAccess>]
+module WriteEventsRequest =
+    let empty = {
+        events = []
+    }
+    let events = Lens.cons' (fun s -> s.events) (fun v s -> { s with events = v })
+
+type WriteEventsResponse = {
+    events: PersistedEventInfo list
+    nextSequence: int64
+}
+
+[<RequireQualifiedAccess>]
+module WriteEventsResponse =
+    let empty = {
+        events = []
+        nextSequence = 0L
+    }
+    let events = Lens.cons' (fun s -> s.events) (fun v s -> { s with events = v })
+    let nextSequence = Lens.cons' (fun s -> s.nextSequence) (fun v s -> { s with nextSequence = v })
+
+type IEventStreamReader =
+    abstract status: unit -> AsyncResult<EventStreamStatus, exn>
+    abstract read: ReadEventsRequest -> AsyncResult<ReadEventsResponse, exn>
+
+type IEventStreamWriter =
+    abstract freeze: unit -> AsyncResult<unit, exn>
+    abstract write: WriteEventsRequest -> AsyncResult<WriteEventsResponse, exn>
+
+type IEventStream =
+    inherit IEventStreamReader
+    inherit IEventStreamWriter
+
+type IEventStreamFactory =
+    inherit IKeyServiceFactory<string, IEventStream>
+
+type IEventStreamFactoryAsync =
+    inherit IKeyServiceFactoryAsync<string, IEventStream>
