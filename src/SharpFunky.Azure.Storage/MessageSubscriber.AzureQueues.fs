@@ -37,7 +37,7 @@ module AsStringContent =
     let minDelay = 10
     let defaultDelay = 1000
 
-    let fromOptions opts =
+    let create opts =
         let subscribe handler =
             let delay = ref None
             let delays = ref None

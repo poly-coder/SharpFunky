@@ -3,11 +3,11 @@ namespace SharpFunky.Storage
 open SharpFunky
 
 type IKeyValueGetter<'k, 't> =
-    abstract get: 'k -> AsyncResult<'t option, exn>
+    abstract get: 'k -> Async<'t option>
 
 type IKeyValuePutter<'k, 't> =
-    abstract put: 'k -> 't -> AsyncResult<unit, exn>
-    abstract del: 'k -> AsyncResult<unit, exn>
+    abstract put: 'k -> 't -> Async<unit>
+    abstract del: 'k -> Async<unit>
 
 type IKeyValueStore<'k, 't> =
     inherit IKeyValueGetter<'k, 't>
@@ -25,9 +25,9 @@ module KeyValueStore =
 
     let empty () =
         createInstance
-            (fun _ -> AsyncResult.ok None)
-            (fun _ _ -> AsyncResult.error (NotSupportedException("") :> _))
-            (fun _ -> AsyncResult.ok())
+            (fun _ -> Async.return' None)
+            (fun _ _ -> async { return raise (NotSupportedException("")) })
+            (fun _ -> Async.return' ())
 
     module InMemory =
         type Options<'k, 't when 'k: comparison> = {
@@ -46,11 +46,11 @@ module KeyValueStore =
             let withUpdateValue value = fun opts -> { opts with updateValue = value }
 
         type internal Command<'k, 't> =
-        | GetCmd of 'k * AsyncReplyChannel<AsyncResult<'t option, exn>>
-        | PutCmd of 'k * 't * AsyncReplyChannel<AsyncResult<unit, exn>>
-        | DelCmd of 'k * AsyncReplyChannel<AsyncResult<unit, exn>>
+        | GetCmd of 'k * AsyncReplyChannel<'t option>
+        | PutCmd of 'k * 't * AsyncReplyChannel<unit>
+        | DelCmd of 'k * AsyncReplyChannel<unit>
 
-        let fromOptions opts =
+        let create opts =
             let updateValue = opts.updateValue
             let mailbox = MailboxProcessor.Start(fun mb -> 
                 let rec loop map = async {
@@ -58,42 +58,38 @@ module KeyValueStore =
                     match msg with
                     | GetCmd (key, rep) ->
                         let found = map |> Map.tryFind key
-                        do rep.Reply <| AsyncResult.ok found
+                        do rep.Reply <| found
                         return! loop map
 
                     | PutCmd (key, value, rep) ->
                         let value' = updateValue key value
                         let map' = map |> Map.add key value'
-                        do rep.Reply <| AsyncResult.ok ()
+                        do rep.Reply ()
                         return! loop map'
 
                     | DelCmd (key, rep) ->
                         let map' = map |> Map.remove key
-                        do rep.Reply <| AsyncResult.ok ()
+                        do rep.Reply ()
                         return! loop map'
                 }
                 loop opts.initMap
             )
-            let send f = async {
-                let! res = mailbox.PostAndAsyncReply(f)
-                return! res
-            }
             let get key =
-                send <| fun rep -> GetCmd(key, rep)
+                mailbox.PostAndAsyncReply(fun r -> GetCmd(key, r))
             let put key value =
-                send <| fun rep -> PutCmd(key, value, rep)
+                mailbox.PostAndAsyncReply(fun r -> PutCmd(key, value, r))
             let del key =
-                send <| fun rep -> DelCmd(key, rep)
+                mailbox.PostAndAsyncReply(fun r -> DelCmd(key, r))
             createInstance get put del
 
-        let from map = Options.empty |> Options.withInitMap map |> fromOptions 
+        let from map = Options.empty |> Options.withInitMap map |> create
         
         let empty() = from Map.empty
 
     module Validated =
         type Options<'k, 't when 'k: comparison> = {
-            validateKey: 'k -> AsyncResult<unit, exn>
-            validateValue: 't -> AsyncResult<unit, exn>
+            validateKey: 'k -> Async<unit>
+            validateValue: 't -> Async<unit>
             store: IKeyValueStore<'k, 't>
         }
 
@@ -102,23 +98,23 @@ module KeyValueStore =
             let fromStore store = 
                 {
                     store = store
-                    validateKey = fun _ -> AsyncResult.ok ()
-                    validateValue = fun _ -> AsyncResult.ok ()
+                    validateKey = fun _ -> Async.return' ()
+                    validateValue = fun _ -> Async.return' ()
                 }
             let withValidateKey value = fun opts -> { opts with validateKey = value }
             let withValidateValue value = fun opts -> { opts with validateValue = value }
         
-        let fromOptions opts =
-            let get key = asyncResult {
+        let create opts =
+            let get key = async {
                 do! opts.validateKey key
                 return! opts.store.get key
             }
-            let put key value = asyncResult {
+            let put key value = async {
                 do! opts.validateKey key
                 do! opts.validateValue value
                 return! opts.store.put key value
             }
-            let del key = asyncResult {
+            let del key = async {
                 do! opts.validateKey key
                 return! opts.store.del key
             }
@@ -140,8 +136,8 @@ module KeyValueStore =
                     converter = converter
                 }
         
-        let fromOptions opts =
-            let get key = asyncResult {
+        let create opts =
+            let get key = async {
                 let! b = opts.store.get key
                 match b with
                 | Some b ->
@@ -150,11 +146,11 @@ module KeyValueStore =
                 | None ->
                     return None
             }
-            let put key value = asyncResult {
+            let put key value = async {
                 let! b = opts.converter.convert value
                 return! opts.store.put key b
             }
-            let del key = asyncResult {
+            let del key = async {
                 return! opts.store.del key
             }
             createInstance get put del

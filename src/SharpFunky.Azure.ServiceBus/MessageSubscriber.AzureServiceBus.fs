@@ -25,7 +25,7 @@ module Options =
     let withOnError value = fun opts -> { opts with onError = value }
     let withAbandonOnError value = fun opts -> { opts with abandonOnError = value }
 
-let fromOptions opts =
+let create opts =
     
     let subscribe handler = 
         let handler' (msg: Message) _ =

@@ -291,51 +291,96 @@ module Tables =
             let le partitionKey rowKey = compare QueryComparisons.LessThanOrEqual partitionKey rowKey
 
     module EntityProperty =
-        let internal typed edmType get set: OptLens<EntityProperty, _> =
-            OptLens.cons'
-                (fun p -> if p.PropertyType = edmType then Some (get p) else None)
-                (fun optVal ->
-                    tee (fun prop ->
-                        match optVal with
-                        | Some v -> set v prop
-                        | None -> ()))
+        open System
 
-        let internal typedNullable edmType get set: OptLens<EntityProperty, _> =
-            OptLens.cons'
-                (fun p -> if p.PropertyType = edmType then Option.ofNullable (get p) else None)
-                (fun optVal ->
-                    tee (fun prop -> set (Option.toNullable optVal) prop))
+        let internal getTyped edmType get = fun (p: EntityProperty) ->
+            if p.PropertyType = edmType
+            then get p |> Option.ofObj
+            else None
+        let internal getTypedNullable edmType get = fun (p: EntityProperty) ->
+            if p.PropertyType = edmType
+            then get p |> Option.ofNullable
+            else None
 
-        let string = typed EdmType.String (fun p -> p.StringValue) (fun v p -> p.StringValue <- v)
-        let binary = typed EdmType.Binary (fun p -> p.BinaryValue) (fun v p -> p.BinaryValue <- v)
-        let boolean = typedNullable EdmType.Boolean (fun p -> p.BooleanValue) (fun v p -> p.BooleanValue <- v)
-        let dateTime = typedNullable EdmType.DateTime (fun p -> p.DateTime) (fun v p -> p.DateTime <- v)
-        let double = typedNullable EdmType.Double (fun p -> p.DoubleValue) (fun v p -> p.DoubleValue <- v)
-        let guid = typedNullable EdmType.Guid (fun p -> p.GuidValue) (fun v p -> p.GuidValue <- v)
-        let int32 = typedNullable EdmType.Int32 (fun p -> p.Int32Value) (fun v p -> p.Int32Value <- v)
-        let int64 = typedNullable EdmType.Int64 (fun p -> p.Int64Value) (fun v p -> p.Int64Value <- v)
+        let getBinary = getTyped EdmType.Binary (fun p -> p.BinaryValue)
+        let getString = getTyped EdmType.String (fun p -> p.StringValue)
+        let getBool = getTypedNullable EdmType.Boolean (fun p -> p.BooleanValue)
+        let getDateTime = getTypedNullable EdmType.DateTime (fun p -> p.DateTime)
+        let getDateTimeOffset = getTypedNullable EdmType.DateTime (fun p -> p.DateTimeOffsetValue)
+        let getDouble = getTypedNullable EdmType.Double (fun p -> p.DoubleValue)
+        let getGuid = getTypedNullable EdmType.Guid (fun p -> p.GuidValue)
+        let getInt32 = getTypedNullable EdmType.Int32 (fun p -> p.Int32Value)
+        let getInt64 = getTypedNullable EdmType.Int64 (fun p -> p.Int64Value)
+
+        let forBinary value = EntityProperty.GeneratePropertyForByteArray value
+        let forString value = EntityProperty.GeneratePropertyForString value
+        let forBool value = EntityProperty.GeneratePropertyForBool (Nullable value)
+        let forDateTime value = EntityProperty.GeneratePropertyForDateTimeOffset (Nullable <| DateTimeOffset value)
+        let forDateTimeOffset value = EntityProperty.GeneratePropertyForDateTimeOffset (Nullable value)
+        let forDouble value = EntityProperty.GeneratePropertyForDouble (Nullable value)
+        let forGuid value = EntityProperty.GeneratePropertyForGuid (Nullable value)
+        let forInt32 value = EntityProperty.GeneratePropertyForInt (Nullable value)
+        let forInt64 value = EntityProperty.GeneratePropertyForLong (Nullable value)
+
+        let makeBinary = Option.matches forBinary (konst null)
+        let makeString = Option.matches forString (konst null)
+        let makeBool = Option.matches forBool (konst null)
+        let makeDateTime = Option.matches forDateTime (konst null)
+        let makeDateTimeOffset = Option.matches forDateTimeOffset (konst null)
+        let makeDouble = Option.matches forDouble (konst null)
+        let makeGuid = Option.matches forGuid (konst null)
+        let makeInt32 = Option.matches forInt32 (konst null)
+        let makeInt64 = Option.matches forInt64 (konst null)
+
+        let string = OptLens.cons' getString (fun v _ -> makeString v)
+        let binary = OptLens.cons' getBinary (fun v _ -> makeBinary v)
+        let bool = OptLens.cons' getBool (fun v _ -> makeBool v)
+        let dateTime = OptLens.cons' getDateTime (fun v _ -> makeDateTime v)
+        let dateTimeOffset = OptLens.cons' getDateTimeOffset (fun v _ -> makeDateTimeOffset v)
+        let double = OptLens.cons' getDouble (fun v _ -> makeDouble v)
+        let guid = OptLens.cons' getGuid (fun v _ -> makeGuid v)
+        let int32 = OptLens.cons' getInt32 (fun v _ -> makeInt32 v)
+        let int64 = OptLens.cons' getInt64 (fun v _ -> makeInt64 v)
+
+    let (|StringProperty|_|) prop = EntityProperty.getString prop
+    let (|BoolProperty|_|) prop = EntityProperty.getBool prop
+    let (|Int64Property|_|) prop = EntityProperty.getInt64 prop
 
     module DynamicTableEntity =
         open System.Text.RegularExpressions
 
-        let property name =
+        let partitionKey: Lens<DynamicTableEntity, _> =
+            Lens.cons' (fun e -> e.PartitionKey) (fun v e -> e.PartitionKey <- v; e)
+        let rowKey: Lens<DynamicTableEntity, _> =
+            Lens.cons' (fun e -> e.RowKey) (fun v e -> e.RowKey <- v; e)
+        let etag: Lens<DynamicTableEntity, _> =
+            Lens.cons' (fun e -> e.ETag) (fun v e -> e.ETag <- v; e)
+        let timestamp: Lens<DynamicTableEntity, _> =
+            Lens.cons' (fun e -> e.Timestamp) (fun v e -> e.Timestamp <- v; e)
+
+        let getProperty name (entity: DynamicTableEntity) =
+            entity.Properties.TryGetValue name
+            |> Option.ofTryOp
+        let setProperty name prop (entity: DynamicTableEntity) =
+            match prop with
+            | Some prop -> entity.Properties.[name] <- prop
+            | None -> entity.Properties.Remove(name) |> ignore
+            entity
+
+        let property getValue makeProp name =
             OptLens.cons'
-                (fun (entity: DynamicTableEntity) ->
-                    entity.Properties.TryGetValue name |> Option.ofTryOp)
-                (fun prop ->
-                    tee (fun entity ->
-                        match prop with
-                        | Some prop -> entity.Properties.[name] <- prop
-                        | None -> entity.Properties.Remove(name) |> ignore))
+                (getProperty name >> Option.bind getValue)
+                (makeProp >> Option.ofObj >> setProperty name)
         
-        let stringProperty name = OptLens.compose (property name) (EntityProperty.string)
-        let binaryProperty name = OptLens.compose (property name) (EntityProperty.binary)
-        let booleanProperty name = OptLens.compose (property name) (EntityProperty.boolean)
-        let dateTimeProperty name = OptLens.compose (property name) (EntityProperty.dateTime)
-        let doubleProperty name = OptLens.compose (property name) (EntityProperty.double)
-        let guidProperty name = OptLens.compose (property name) (EntityProperty.guid)
-        let int32Property name = OptLens.compose (property name) (EntityProperty.int32)
-        let int64Property name = OptLens.compose (property name) (EntityProperty.int64)
+        let string = property EntityProperty.getString EntityProperty.makeString
+        let binary = property EntityProperty.getBinary EntityProperty.makeBinary
+        let bool = property EntityProperty.getBool EntityProperty.makeBool
+        let dateTime = property EntityProperty.getDateTime EntityProperty.makeDateTime
+        let dateTimeOffset = property EntityProperty.getDateTimeOffset EntityProperty.makeDateTimeOffset
+        let double = property EntityProperty.getDouble EntityProperty.makeDouble
+        let guid = property EntityProperty.getGuid EntityProperty.makeGuid
+        let int32 = property EntityProperty.getInt32 EntityProperty.makeInt32
+        let int64 = property EntityProperty.getInt64 EntityProperty.makeInt64
 
         let addProperty name prop =
             tee (fun (entity: DynamicTableEntity) -> 

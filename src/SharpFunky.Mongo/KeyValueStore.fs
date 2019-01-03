@@ -22,7 +22,7 @@ module Options =
         }
     let withUpdateKey value = fun opts -> { opts with updateKey = value }
 
-let fromOptions opts =
+let create opts =
     let settings = MongoCollectionSettings()
     settings.AssignIdOnInsert <- false
     let collection = opts.database.GetCollection<'t>(opts.collection, settings)
@@ -36,14 +36,14 @@ let fromOptions opts =
             let! cursor = collection.FindAsync(filter, findOpts) |> Async.AwaitTask
             let! list = cursor.ToListAsync() |> Async.AwaitTask
             return Seq.tryHead list
-        } |> AsyncResult.ofAsync
+        }
 
     let put key value =
         async {
             let value' = opts.updateKey key value
             do! collection.InsertOneAsync(value') |> Async.AwaitTask
             return ()
-        } |> AsyncResult.ofAsync
+        }
 
     let del key = 
         async {
@@ -51,5 +51,5 @@ let fromOptions opts =
             let! result = collection.DeleteOneAsync(filter) |> Async.AwaitTask
             ignore result
             return ()
-        } |> AsyncResult.ofAsync
+        }
     KeyValueStore.createInstance get put del

@@ -20,12 +20,12 @@ module AsStringContent =
                 converter = converter
             }
 
-    let fromOptions opts =
+    let create opts =
     
-        let publish message = asyncResult {
+        let publish message = async {
             let! data = opts.converter.convert message
             let msg = CloudQueueMessage(data)
-            do! opts.queue.AddMessageAsync(msg) |> AsyncResult.ofTaskVoid
+            do! opts.queue.AddMessageAsync(msg) |> Async.ofTaskVoid
         }
 
         MessagePublisher.createInstance publish
@@ -45,12 +45,12 @@ module AsBinaryContent =
                 converter = converter
             }
 
-    let fromOptions opts =
+    let create opts =
     
-        let publish message = asyncResult {
+        let publish message = async {
             let! data = opts.converter.convert message
             let msg = CloudQueueMessage.CreateCloudQueueMessageFromByteArray(data)
-            do! opts.queue.AddMessageAsync(msg) |> AsyncResult.ofTaskVoid
+            do! opts.queue.AddMessageAsync(msg) |> Async.ofTaskVoid
         }
 
         MessagePublisher.createInstance publish

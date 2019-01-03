@@ -24,8 +24,8 @@ module MessagePublisher =
                     converter = converter
                 }
 
-        let fromOptions opts =
-            let publish message = asyncResult {
+        let create opts =
+            let publish message = async {
                 let! bytes = opts.converter.convert message
                 opts.connection.Publish(opts.subject, bytes)
                 return ()
@@ -50,8 +50,8 @@ module MessagePublisher =
                     converter = converter
                 }
 
-        let fromOptions opts =
-            let publish message = asyncResult {
+        let create opts =
+            let publish message = async {
                 let! bytes = opts.converter.convert message
                 let! response = opts.connection.PublishAsync(opts.subject, bytes) |> Async.mapTask Result.ok
                 return response
@@ -95,7 +95,7 @@ module MessageSubscriber =
             let withAutoUnsubscribe max o = { o with autoUnsubscribe = Some max }
             let withOnError value = fun opts -> { opts with onError = value }
 
-        let fromOptions opts =
+        let create opts =
             let subscribe handler =
                 let handler' (_: obj) (args: MsgHandlerEventArgs) =
                     async {
@@ -158,7 +158,7 @@ module MessageSubscriber =
             let withoutQueue o = { o with queue = None }
             let withOnError value = fun opts -> { opts with onError = value }
 
-        let fromOptions opts =
+        let create opts =
             let subscribe handler =
                 let handler' (_: obj) (args: StanMsgHandlerArgs) =
                     async {

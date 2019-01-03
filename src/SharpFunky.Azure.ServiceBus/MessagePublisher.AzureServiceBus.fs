@@ -18,14 +18,14 @@ module Options =
             converter = converter
         }
 
-let fromOptions opts =
+let create opts =
     
-    let publish message = asyncResult {
+    let publish message = async {
         let! meta, data = opts.converter.convert message
         let msg = Message(data)
         for k, v in Map.toSeq meta do
             msg.UserProperties.[k] <- v
-        do! opts.queue.SendAsync(msg) |> AsyncResult.ofTaskVoid
+        do! opts.queue.SendAsync(msg) |> Async.ofTaskVoid
     }
 
     MessagePublisher.createInstance publish

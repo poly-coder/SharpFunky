@@ -14,7 +14,8 @@
     <Compile Include="Conversion.fs" />
     <Compile Include="Messaging.fs" />
     <Compile Include="KeyValueStore.fs" />
-    <Compile Include="EventStore.fs" />
+    <Compile Include="EventStorage.fs" />
+    <Compile Include="EventStorage.Stateless.fs" />
   </ItemGroup>
 
   <ItemGroup>

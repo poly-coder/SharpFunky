@@ -1,9 +1,10 @@
-﻿module SharpFunky.Storage.EventStore.AzureTables
+﻿module SharpFunky.EventStorage.StatelessEventStream.AzureTables
 
 open System
 open System.Threading.Tasks
 open SharpFunky
-open SharpFunky.Storage
+open SharpFunky.EventStorage
+open SharpFunky.EventStorage.Stateless
 open SharpFunky.AzureStorage.Tables
 open Microsoft.WindowsAzure.Storage.Table
 open FSharp.Control.Tasks.V2
@@ -42,44 +43,61 @@ let createEventStream (opts: Options) =
         |> String.trimStartWith '0'
         |> fun s -> if s = "" then "0" else s
         |> Int64.parse
-    
-    let isFrozen = DynamicTableEntity.booleanProperty "IsFrozen"
-    let nextSequence = DynamicTableEntity.int64Property "NextSequence"
 
-    let statusToEntity (status: EventStreamStatus) =
-        OptLens.setSome isFrozen status.isFrozen
-        >> OptLens.setSome nextSequence status.nextSequence
-    let createStatusToEntity status =
-        let entity = DynamicTableEntity(opts.partitionKey, statusRowKey)
-        entity.ETag <- "*"
-        entity |> statusToEntity status
-
-    let statusFromEntity (entity: DynamicTableEntity) =
-        EventStreamStatus.empty
-        |> Lens.setOpt EventStreamStatus.isFrozen (OptLens.getOpt isFrozen entity)
-        |> Lens.setOpt EventStreamStatus.nextSequence (OptLens.getOpt nextSequence entity)
-
-    let eventMetaValueToEntity name (metaValue: MetaValue) (entity: DynamicTableEntity) =
+    let metaValueToEntity name (metaValue: MetaValue) (entity: DynamicTableEntity) =
         let name = sprintf "%s%s" eventMetaPrefix name
         match metaValue with
         | MetaNull -> []
         | MetaString v ->
-            [ sprintf "S:%s" v
-                |> EntityProperty.GeneratePropertyForString ]
+            [ sprintf "S:%s" v |> EntityProperty.forString ]
+        | MetaBool v ->
+            [ EntityProperty.forBool v ]
         | MetaStrings vs ->
             [ String.Join("|", vs |> List.toArray)
                 |> sprintf "L:%s"
-                |> EntityProperty.GeneratePropertyForString ]
+                |> EntityProperty.forString ]
         | MetaLong v ->
-            [ EntityProperty.GeneratePropertyForLong (Nullable v) ]
+            [ EntityProperty.forInt64 v ]
         |> List.map (fun prop -> name, prop)
         |> fun props -> entity |> DynamicTableEntity.addProperties props
-    let eventMetaDataToEntity (meta: MetaData) (entity: DynamicTableEntity) =
+    let metaDataToEntity (meta: MetaData) (entity: DynamicTableEntity) =
         do meta
             |> Map.toSeq
             |> Seq.iter (fun (name, value) ->
-                entity |> eventMetaValueToEntity name value |> ignore)
+                entity |> metaValueToEntity name value |> ignore)
         entity
+    let metaValueFromProperty (prop: EntityProperty) =
+        match prop with
+        | StringProperty str ->
+            if str.StartsWith "S:" then str.Substring(2) |> MetaString 
+            elif str.StartsWith("L:") then str.Substring(2).Split('|') |> List.ofArray |> MetaStrings
+            else invalidOp (sprintf "Unknown string property prefix: '%s'" (str.Substring(2)))
+        | BoolProperty v -> MetaBool v
+        | Int64Property v -> MetaLong v
+        | _ -> invalidOp ("Unknown property value")
+    let metaDataFromEntity (entity: DynamicTableEntity): MetaData =
+        entity
+        |> DynamicTableEntity.getProperties
+        |> DynamicTableEntity.filterPrefixedBy eventMetaPrefix
+        |> Seq.map (fun (name, prop) -> name, metaValueFromProperty prop)
+        |> Map.ofSeq
+
+    let statusNextSequence = DynamicTableEntity.int64 "NextSequence"
+
+    let statusToEntity (status: EventStreamStatus) entity =
+        entity
+        |> OptLens.setSome statusNextSequence status.nextSequence
+        |> metaDataToEntity status.meta
+    let createStatusToEntity status =
+        DynamicTableEntity(opts.partitionKey, statusRowKey)
+        |> Lens.set DynamicTableEntity.etag "*"
+        |> statusToEntity status
+
+    let statusFromEntity (entity: DynamicTableEntity) =
+        EventStreamStatus.empty
+        |> Lens.setOpt EventStreamStatus.nextSequence (OptLens.getOpt statusNextSequence entity)
+        |> Lens.set EventStreamStatus.meta (metaDataFromEntity entity)
+
     let eventContentToEntity (content: EventContent) (entity: DynamicTableEntity) =
         match content with
         | EmptyEvent -> entity
@@ -94,7 +112,7 @@ let createEventStream (opts: Options) =
                 (EntityProperty.GeneratePropertyForString eventDataTypeString)
             |> DynamicTableEntity.encodeLargeString eventDataPrefix text
     let eventDataToEntity (event: EventData) =
-        eventMetaDataToEntity event.meta
+        metaDataToEntity event.meta
         >> eventContentToEntity event.data
     let eventToEntity (event: PersistedEvent) =
         let rowKey = eventRowKey event.sequence
@@ -103,28 +121,8 @@ let createEventStream (opts: Options) =
         entity
         |> eventDataToEntity event.event
 
-    let filterEventMetaValue (prop: EntityProperty) =
-        match prop.PropertyType with
-        | EdmType.String ->
-            match prop.StringValue with
-            | null -> MetaNull
-            | str -> 
-                if str.StartsWith "S:" then str.Substring(2) |> MetaString 
-                elif str.StartsWith("L:") then str.Substring(2).Split('|') |> List.ofArray |> MetaStrings
-                else MetaNull
-        | EdmType.Int64 ->
-            match Option.ofNullable prop.Int64Value with
-            | Some v -> MetaLong v
-            | _ -> MetaNull
-        | _ -> MetaNull
-    let eventMetaDataFromEntity (entity: DynamicTableEntity): MetaData =
-        entity
-        |> DynamicTableEntity.getProperties
-        |> DynamicTableEntity.filterPrefixedBy eventMetaPrefix
-        |> Seq.map (fun (name, prop) -> name, filterEventMetaValue prop)
-        |> Map.ofSeq
     let eventContentFromEntity (entity: DynamicTableEntity) =
-        match entity |> OptLens.getOpt (DynamicTableEntity.stringProperty eventDataTypeName) with
+        match entity |> OptLens.getOpt (DynamicTableEntity.string eventDataTypeName) with
         | Some dt when dt = eventDataTypeBinary ->
             entity
             |> DynamicTableEntity.decodeLargeBinary eventDataPrefix
@@ -138,7 +136,7 @@ let createEventStream (opts: Options) =
             invalidOp (sprintf "Unknown event content data type: '%s'" dt)
     let eventDataFromEntity (entity: DynamicTableEntity) =
         EventData.empty
-        |> Lens.set EventData.meta (eventMetaDataFromEntity entity)
+        |> Lens.set EventData.meta (metaDataFromEntity entity)
         |> Lens.set EventData.data (eventContentFromEntity entity)
     let eventFromEntity (entity: DynamicTableEntity) =
         PersistedEvent.empty
@@ -152,27 +150,11 @@ let createEventStream (opts: Options) =
         | None -> return EventStreamStatus.empty, "*"
     }
 
-    let freezeTask () = task {
-        let! status, etag = getStatusOrDefaultTask()
-        match status.isFrozen with
-        | false ->
-            let statusEntity =
-                { status with isFrozen = true }
-                |> createStatusToEntity
-            statusEntity.ETag <- etag
-            // let! _ = replace statusEntity |> execute
-            let! result = opts.table |> execute (replace statusEntity)
-            return ()
-        | true -> return ()
-    }
-
     let status () =
         task { 
             let! st, _ = getStatusOrDefaultTask()
             return st
-        } |> AsyncResult.ofTask
-
-    let freeze () = freezeTask() |> AsyncResult.ofTask
+        } |> Async.ofTask
 
     let read (request: ReadEventsRequest) =
         task {
@@ -188,42 +170,37 @@ let createEventStream (opts: Options) =
                 match events with
                 | [] -> fromSequence
                 | evs -> (evs |> Seq.map (fun e -> e.sequence) |> Seq.max) + 1L
-            return ReadEventsResponse.empty
-                |> Lens.set ReadEventsResponse.events events
-                |> Lens.set ReadEventsResponse.nextSequence nextSequence
-        } |> AsyncResult.ofTask
+            return ReadEventsResponse.create events nextSequence
+        } |> Async.ofTask
 
     let write (request: WriteEventsRequest) =
         task {
             if request.events = [] then return invalidOp "Cannot write empty collection of events"
             let eventCount = List.length request.events
             if eventCount > 99 then return invalidOp "Cannot write more than 99 events due to restrictions on Azure Storage Tables"
-            let! status, etag = getStatusOrDefaultTask ()
-            if status.isFrozen then return invalidOp "Event stream is frozen"
             let batch = TableBatchOperation()
             request.events
             |> Seq.iteri (fun index ev ->
                 PersistedEvent.empty
                 |> Lens.set PersistedEvent.event ev
-                |> Lens.set PersistedEvent.sequence (status.nextSequence + int64 index)
+                |> Lens.set PersistedEvent.sequence (request.startSequence + int64 index)
                 |> eventToEntity
                 |> insertEcho true
                 |> batch.Add)
-            let nextSequence = status.nextSequence + int64 eventCount
-            let statusEntity =
-                { status with nextSequence = nextSequence }
+            let nextSequence = request.startSequence + int64 eventCount
+            { nextSequence = nextSequence; meta = request.meta }
                 |> createStatusToEntity
-            statusEntity.ETag <- etag
-            statusEntity |> replace |> batch.Add
+                |> Lens.set DynamicTableEntity.etag "*"
+                |> insertOrReplace
+                |> batch.Add
             let! _ = opts.table |> executeBatch batch
-            return { nextSequence = nextSequence }
+            return ()
             
-        } |> AsyncResult.ofTask
+        } |> Async.ofTask
 
-    { new IEventStream with
+    { new IStatelessEventStream with
         member this.status () = status ()
         member this.read request = read request
-        member this.freeze () = freeze ()
         member this.write request = write request }
 
 let createEventStreamFromPartitions table =
@@ -234,7 +211,7 @@ let createEventStreamFromPartitions table =
         }
         createEventStream opts
 
-    { new IEventStreamFactory with
+    { new IStatelessEventStreamFactory with
         member this.create partitionKey = create partitionKey }
 
 let createEventStreamFromTable (tableClient: CloudTableClient) =

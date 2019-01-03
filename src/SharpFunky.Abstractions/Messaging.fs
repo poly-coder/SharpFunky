@@ -4,7 +4,7 @@ open SharpFunky
 open System
 
 type IMessagePublisher<'m, 'r> =
-    abstract publish: 'm -> AsyncResult<'r, exn>
+    abstract publish: 'm -> Async<'r>
 
 type IMessageSubscriber<'m> =
     abstract subscribe: AsyncFn<'m, unit> -> IDisposable
@@ -19,10 +19,10 @@ module MessagePublisher =
         fun a -> converter.publish a
 
     let convertInput converter (publisher: IMessagePublisher<'b, 'r>) =
-        converter |> AsyncResultFn.bind (toFun publisher) |> createInstance
+        converter |> AsyncFn.bind (toFun publisher) |> createInstance
 
     let convertOutput converter (publisher: IMessagePublisher<'b, 'r>) =
-        toFun publisher |> AsyncResultFn.bind converter |> createInstance
+        toFun publisher |> AsyncFn.bind converter |> createInstance
 
 module MessageSubscriber =
 
