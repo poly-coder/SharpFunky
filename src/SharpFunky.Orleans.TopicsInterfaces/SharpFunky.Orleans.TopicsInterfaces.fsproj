@@ -2,22 +2,21 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
-    <Version>0.0.4</Version>
+    <Version>0.0.1</Version>
     <Authors>Iskander Sierra</Authors>
     <Company>poly-coder</Company>
-    <PackageId>SharpFunkyAzure.ServiceBus</PackageId>
-    <Product>SharpFunkyAzure.ServiceBus</Product>
+    <PackageId>SharpFunky.Orleans.TopicsInterfaces</PackageId>
+    <Product>SharpFunky.Orleans.TopicsInterfaces</Product>
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="MessageSubscriber.AzureServiceBus.fs" />
-    <Compile Include="MessagePublisher.AzureServiceBus.fs" />
+    <Compile Include="Topics.fs" />
+    <Compile Include="TopicPropertyManager.fs" />
   </ItemGroup>
 
-  <ItemGroup />
-
   <ItemGroup>
-    <PackageReference Include="Microsoft.Azure.ServiceBus" Version="3.2.1" />
+    <PackageReference Include="Microsoft.Orleans.Core.Abstractions" Version="2.2.0" />
+    <PackageReference Include="Microsoft.Orleans.OrleansCodeGenerator" Version="2.2.0" />
   </ItemGroup>
 
   <ItemGroup>

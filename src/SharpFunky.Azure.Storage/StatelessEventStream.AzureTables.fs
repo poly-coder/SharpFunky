@@ -5,13 +5,12 @@ open System.Threading.Tasks
 open SharpFunky
 open SharpFunky.EventStorage
 open SharpFunky.EventStorage.Stateless
+open SharpFunky.Services
 open SharpFunky.AzureStorage.Tables
 open Microsoft.WindowsAzure.Storage.Table
 open FSharp.Control.Tasks.V2
 open SharpFunky.Storage
 open System.Diagnostics
-open SharpFunky.Services
-open SharpFunky
 
 type Options = {
     table: CloudTable
@@ -29,7 +28,7 @@ module Options =
     let partitionKey = Lens.cons' (fun opts -> opts.partitionKey) (fun value opts -> { opts with partitionKey = value })
 
 
-let createEventStream (opts: Options) =
+let createStatelessEventStream (opts: Options) =
     let eventDataTypeName = "DataType"
     let eventDataTypeBinary = "binary"
     let eventDataTypeString = "string"
@@ -84,7 +83,7 @@ let createEventStream (opts: Options) =
 
     let statusNextSequence = DynamicTableEntity.int64 "NextSequence"
 
-    let statusToEntity (status: EventStreamStatus) entity =
+    let statusToEntity (status: StatelessEventStreamStatus) entity =
         entity
         |> OptLens.setSome statusNextSequence status.nextSequence
         |> metaDataToEntity status.meta
@@ -94,9 +93,9 @@ let createEventStream (opts: Options) =
         |> statusToEntity status
 
     let statusFromEntity (entity: DynamicTableEntity) =
-        EventStreamStatus.empty
-        |> Lens.setOpt EventStreamStatus.nextSequence (OptLens.getOpt statusNextSequence entity)
-        |> Lens.set EventStreamStatus.meta (metaDataFromEntity entity)
+        StatelessEventStreamStatus.empty
+        |> Lens.setOpt StatelessEventStreamStatus.nextSequence (OptLens.getOpt statusNextSequence entity)
+        |> Lens.set StatelessEventStreamStatus.meta (metaDataFromEntity entity)
 
     let eventContentToEntity (content: EventContent) (entity: DynamicTableEntity) =
         match content with
@@ -147,7 +146,7 @@ let createEventStream (opts: Options) =
     let getStatusOrDefaultTask () = task {
         match! opts.table |> executeRetrieve opts.partitionKey statusRowKey with
         | Some entity -> return statusFromEntity entity, entity.ETag
-        | None -> return EventStreamStatus.empty, "*"
+        | None -> return StatelessEventStreamStatus.empty, "*"
     }
 
     let status () =
@@ -156,7 +155,7 @@ let createEventStream (opts: Options) =
             return st
         } |> Async.ofTask
 
-    let read (request: ReadEventsRequest) =
+    let read (request: StatelessReadEventsRequest) =
         task {
             let fromSequence = request.fromSequence |> Option.defaultValue 0L
             let fromSequenceKey = eventRowKey fromSequence
@@ -165,15 +164,16 @@ let createEventStream (opts: Options) =
                 let where = Query.EntityKey.ge opts.partitionKey fromSequenceKey
                 TableQuery().Where(where).Take(Nullable takeCount)
             let! segment = executeQuerySegmented null query opts.table
+            let hasMore = isNull segment.ContinuationToken |> not
             let events = segment |> Seq.map eventFromEntity |> Seq.toList
             let nextSequence =
                 match events with
                 | [] -> fromSequence
                 | evs -> (evs |> Seq.map (fun e -> e.sequence) |> Seq.max) + 1L
-            return ReadEventsResponse.create events nextSequence
+            return StatelessReadEventsResponse.create events nextSequence hasMore
         } |> Async.ofTask
 
-    let write (request: WriteEventsRequest) =
+    let write (request: StatelessWriteEventsRequest) =
         task {
             if request.events = [] then return invalidOp "Cannot write empty collection of events"
             let eventCount = List.length request.events
@@ -188,7 +188,9 @@ let createEventStream (opts: Options) =
                 |> insertEcho true
                 |> batch.Add)
             let nextSequence = request.startSequence + int64 eventCount
-            { nextSequence = nextSequence; meta = request.meta }
+            { 
+                StatelessEventStreamStatus.nextSequence = nextSequence
+                StatelessEventStreamStatus.meta = request.meta }
                 |> createStatusToEntity
                 |> Lens.set DynamicTableEntity.etag "*"
                 |> insertOrReplace
@@ -203,22 +205,22 @@ let createEventStream (opts: Options) =
         member this.read request = read request
         member this.write request = write request }
 
-let createEventStreamFromPartitions table =
+let createStatelessEventStreamFromPartitions table =
     let create partitionKey =
         let opts: Options = {
             table = table
             partitionKey = partitionKey
         }
-        createEventStream opts
+        createStatelessEventStream opts
 
     { new IStatelessEventStreamFactory with
         member this.create partitionKey = create partitionKey }
 
-let createEventStreamFromTable (tableClient: CloudTableClient) =
+let createStatelessEventStreamFromTable (tableClient: CloudTableClient) =
     let create tableName = async {
         let table = tableClient.GetTableReference(tableName)
         do! table.CreateIfNotExistsAsync() |> Async.ofTaskVoid
-        return createEventStreamFromPartitions table
+        return createStatelessEventStreamFromPartitions table
     }
 
     { new IKeyServiceFactoryAsync<_, _> with

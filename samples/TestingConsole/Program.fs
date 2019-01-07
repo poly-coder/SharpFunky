@@ -26,7 +26,7 @@ let testStorageEventStream argv =
         let accountConfig: AzureStorageAccountConfig = conf.GetSection("AzureStorageAccount").Get()
         let account = Account.parse accountConfig.ConnectionString
         let client = account.CreateCloudTableClient()
-        let tableFactory = AzureTables.createEventStreamFromTable client
+        let tableFactory = AzureTables.createStatelessEventStreamFromTable client
         let! partitionFactory = tableFactory.create "eventstream"
         let sample1 = partitionFactory.create "sample1"
         
@@ -34,7 +34,7 @@ let testStorageEventStream argv =
         printfn "Stream status: %A" status
         printfn ""
 
-        let readRequest: ReadEventsRequest = {
+        let readRequest: StatelessReadEventsRequest = {
             fromSequence = None
             limit = Some 10
             reverse = false
@@ -43,7 +43,7 @@ let testStorageEventStream argv =
         printfn "Read 10: %A" readResponse
         printfn ""
 
-        let writeRequest: WriteEventsRequest = {
+        let writeRequest: StatelessWriteEventsRequest = {
             startSequence = status.nextSequence
             meta = [ "IsFrozen", MetaBool false ] |> Map.ofSeq
             events = [

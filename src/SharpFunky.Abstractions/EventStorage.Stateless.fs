@@ -4,14 +4,15 @@ open SharpFunky
 open SharpFunky.Services
 open SharpFunky.EventStorage
 
-type EventStreamStatus = {
+
+type StatelessEventStreamStatus = {
     nextSequence: int64
     meta: MetaData
 }
 
 [<RequireQualifiedAccess>]
-module EventStreamStatus =
-    let empty: EventStreamStatus = {
+module StatelessEventStreamStatus =
+    let empty: StatelessEventStreamStatus = {
         meta = Map.empty 
         nextSequence = 0L
     }
@@ -20,15 +21,15 @@ module EventStreamStatus =
     let create nextSequence' =
         empty |> Lens.set nextSequence nextSequence'
 
-type ReadEventsRequest = {
+type StatelessReadEventsRequest = {
     fromSequence: int64 option
     limit: int option
     reverse: bool
 }
 
 [<RequireQualifiedAccess>]
-module ReadEventsRequest =
-    let empty: ReadEventsRequest = {
+module StatelessReadEventsRequest =
+    let empty: StatelessReadEventsRequest = {
         fromSequence = None
         limit = None
         reverse = false
@@ -37,33 +38,37 @@ module ReadEventsRequest =
     let limit = Lens.cons' (fun s -> s.limit) (fun v s -> { s with limit = v })
     let reverse = Lens.cons' (fun s -> s.reverse) (fun v s -> { s with reverse = v })
 
-type ReadEventsResponse = {
+type StatelessReadEventsResponse = {
     events: PersistedEvent list
     nextSequence: int64
+    hasMore: bool
 }
 
 [<RequireQualifiedAccess>]
-module ReadEventsResponse =
-    let empty: ReadEventsResponse = {
+module StatelessReadEventsResponse =
+    let empty: StatelessReadEventsResponse = {
         events = []
         nextSequence = 0L
+        hasMore = false
     }
     let events = Lens.cons' (fun s -> s.events) (fun v s -> { s with events = v })
     let nextSequence = Lens.cons' (fun s -> s.nextSequence) (fun v s -> { s with nextSequence = v })
-    let create events' nextSequence' =
+    let hasMore = Lens.cons' (fun s -> s.hasMore) (fun v s -> { s with hasMore = v })
+    let create events' nextSequence' hasMore' =
         empty
         |> Lens.set events events'
         |> Lens.set nextSequence nextSequence'
+        |> Lens.set hasMore hasMore'
 
-type WriteEventsRequest = {
+type StatelessWriteEventsRequest = {
     events: EventData list
     startSequence: int64
     meta: MetaData
 }
 
 [<RequireQualifiedAccess>]
-module WriteEventsRequest =
-    let empty: WriteEventsRequest = {
+module StatelessWriteEventsRequest =
+    let empty: StatelessWriteEventsRequest = {
         events = []
         startSequence = 0L
         meta = Map.empty
@@ -77,9 +82,9 @@ module WriteEventsRequest =
         |> Lens.set startSequence startSequence'
 
 type IStatelessEventStream =
-    abstract status: unit -> Async<EventStreamStatus>
-    abstract read: ReadEventsRequest -> Async<ReadEventsResponse>
-    abstract write: WriteEventsRequest -> Async<unit>
+    abstract status: unit -> Async<StatelessEventStreamStatus>
+    abstract read: StatelessReadEventsRequest -> Async<StatelessReadEventsResponse>
+    abstract write: StatelessWriteEventsRequest -> Async<unit>
 
 type IStatelessEventStreamFactory =
     inherit IKeyServiceFactory<string, IStatelessEventStream>
