@@ -4,7 +4,6 @@ open SharpFunky
 open SharpFunky.Services
 
 type EventStreamStatus = {
-    isFrozen: bool
     nextSequence: int64
     meta: MetaData
 }
@@ -12,12 +11,10 @@ type EventStreamStatus = {
 [<RequireQualifiedAccess>]
 module EventStreamStatus =
     let empty: EventStreamStatus = {
-        isFrozen = false
         meta = Map.empty
         nextSequence = 0L
     }
     let meta = Lens.cons' (fun s -> s.meta) (fun v s -> { s with meta = v })
-    let isFrozen = Lens.cons' (fun s -> s.isFrozen) (fun v s -> { s with isFrozen = v })
     let nextSequence = Lens.cons' (fun s -> s.nextSequence) (fun v s -> { s with nextSequence = v })
     let create nextSequence' =
         empty
@@ -81,7 +78,6 @@ module WriteEventsRequest =
 
 type IEventStream =
     abstract status: unit -> Async<EventStreamStatus>
-    abstract freeze: unit -> Async<unit>
     abstract read: ReadEventsRequest -> Async<ReadEventsResponse>
     abstract write: WriteEventsRequest -> Async<unit>
 

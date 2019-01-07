@@ -13,6 +13,14 @@ type TopicPropertyManagerOptions = {
     eventStreamFactory: IEventStreamFactoryGrain
 }
 
+module TopicPropertyManagerOptions =
+    let tableName = Lens.cons' (fun s -> s.tableName) (fun v s -> { s with tableName = v })
+    let eventStreamFactory = Lens.cons' (fun s -> s.eventStreamFactory) (fun v s -> { s with eventStreamFactory = v })
+    let create tableName factory = {
+        tableName = tableName
+        eventStreamFactory = factory
+    }
+
 type internal TopicPropertyManagerEvent =
     | PropertyCreated of PropertyCreatedEvent
 
@@ -21,7 +29,7 @@ and internal PropertyCreatedEvent = {
     propertyId: Guid
 }
 
-type TopicPropertyManagerGrain(options: TopicPropertyManagerOptions) as this =
+type TopicPropertyManagerGrain(options: TopicPropertyManagerOptions) =
     inherit Grain()
 
     [<Literal>]
@@ -94,49 +102,8 @@ type TopicPropertyManagerGrain(options: TopicPropertyManagerOptions) as this =
             return! loop None
         } :> Task
 
-    let getProperty (request: GetPropertyRequest) =
-        task {
-            match propertiesByName |> Map.tryFind request.propertyName with
-            | Some propertyInfo ->
-                return GetPropertyResponse.create propertyInfo
-            | None ->
-                return GetPropertyResponse.failed
-        }
-
-    let createProperty (request: CreatePropertyRequest) =
-        task {
-            let found =
-                propertiesByName
-                |> Map.containsKey request.propertyName
-            if found then
-                return CreatePropertyResponse.empty
-            else
-                let propertyInfo: TopicPropertyInfo = {
-                    propertyId = Guid.NewGuid()
-                    propertyName = request.propertyName
-                }
-                let events = [
-                    PropertyCreated {
-                        propertyId = propertyInfo.propertyId
-                        propertyName = propertyInfo.propertyName
-                    }
-                ]
-                let eventsData = events |> List.map eventToData
-                let writeRequest = WriteEventsRequest.create eventsData
-                do! eventStream.Write writeRequest
-                do events |> Seq.iter applyEvent
-                return CreatePropertyResponse.create propertyInfo
-        }
-
-    let listProperties () =
-        task {
-            let items =
-                propertiesByName
-                |> Map.toSeq
-                |> Seq.map snd
-                |> Seq.toList
-            return ListPropertiesResponse.create items
-        }
+    let findProperty propertyName =
+        propertiesByName |> Map.tryFind propertyName
 
     override this.OnActivateAsync() =
         task {
@@ -147,6 +114,44 @@ type TopicPropertyManagerGrain(options: TopicPropertyManagerOptions) as this =
         } :> Task
 
     interface ITopicPropertyManager with
-        member __.GetProperty request = getProperty request
-        member __.CreateProperty request = createProperty request
-        member __.ListProperties () = listProperties ()
+        member __.GetProperty request =
+            task {
+                match findProperty request.propertyName with
+                | Some propertyInfo ->
+                    return GetPropertyResponse.create propertyInfo
+                | None ->
+                    return GetPropertyResponse.failed
+            }
+
+        member __.CreateProperty request =
+            task {
+                match findProperty request.propertyName with
+                | Some _ ->
+                    return CreatePropertyResponse.empty
+                | _ ->
+                    let propertyId = Guid.NewGuid()
+                    let events = [
+                        PropertyCreated {
+                            propertyId = propertyId
+                            propertyName = request.propertyName
+                        }
+                    ]
+                    let eventsData = events |> List.map eventToData
+                    let writeRequest = WriteEventsRequest.create eventsData
+                    do! eventStream.Write writeRequest
+                    do events |> Seq.iter applyEvent
+                    return CreatePropertyResponse.create {
+                        propertyId = propertyId
+                        propertyName = request.propertyName
+                    }
+            }
+
+        member __.ListProperties () =
+            task {
+                let items =
+                    propertiesByName
+                    |> Map.toSeq
+                    |> Seq.map snd
+                    |> Seq.toList
+                return ListPropertiesResponse.create items
+            }
