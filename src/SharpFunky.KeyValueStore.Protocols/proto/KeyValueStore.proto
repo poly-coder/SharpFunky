@@ -1,0 +1,37 @@
+﻿syntax = "proto3";
+
+option csharp_namespace = "Sharpfunky.KeyValueStore.Protocols";
+
+package Sharpfunky.KeyValueStore.Protocols;
+
+message GetValueRequest {
+  string key = 1;
+}
+
+message GetValueResponse {
+  bool found = 1;
+  bytes value = 2;
+}
+
+message PutValueRequest {
+  string key = 1;
+  bytes value = 2;
+}
+
+message PutValueResponse {
+  bool success = 1;
+}
+
+message RemoveValueRequest {
+  string key = 1;
+}
+
+message RemoveValueResponse {
+  bool success = 1;
+}
+
+service KeyValueStore {
+  rpc GetValue(GetValueRequest) returns (GetValueResponse);
+  rpc PutValue(PutValueRequest) returns (PutValueResponse);
+  rpc RemoveValue(RemoveValueRequest) returns (RemoveValueResponse);
+}

@@ -154,3 +154,206 @@ module KeyValueStore =
                 return! opts.store.del key
             }
             createInstance get put del
+
+namespace SharpFunky.Storage
+open SharpFunky
+open System.Threading
+
+module KeyValue =
+
+    type KeyValueCommand<'k, 't> =
+        | GetValue of key: 'k * cToken: CancellationToken * replyCh: Sink<Result<'t option, exn>>
+        | PutValue of key: 'k * value: 't * cToken: CancellationToken * replyCh: Sink<Result<unit, exn>>
+        | DelValue of key: 'k * cToken: CancellationToken * replyCh: Sink<Result<unit, exn>>
+
+    type KeyValueStore<'k, 't> = Sink<KeyValueCommand<'k, 't>>
+
+    module InMemory =
+        type Options<'k, 't when 'k: comparison> = {
+            initMap: Map<'k, 't>
+            updateValueKey: LensSetter<'t, 'k>
+        }
+
+        [<RequireQualifiedAccess>]
+        module Options =
+            let empty<'k, 't when 'k: comparison> : Options<'k, 't> = 
+                {
+                    initMap = Map.empty
+                    updateValueKey = fun _ v -> v
+                }
+            let initMap<'k, 't when 'k: comparison> : Lens<_, Map<'k, 't>> =
+                Lens.cons' (fun o -> o.initMap) (fun v o -> { o with initMap = v })
+            let updateValueKey<'k, 't when 'k: comparison> : Lens<_, LensSetter<'t, 'k>> =
+                Lens.cons' (fun o -> o.updateValueKey) (fun v o -> { o with updateValueKey = v })
+
+        let create opts: KeyValueStore<_, _> =
+            let initMap = opts |> Lens.get Options.initMap
+            let updateValueKey = opts |> Lens.get Options.updateValueKey
+
+            let mapState repl fn map =
+                try
+                    let map', result = fn map
+                    do Result.ok result |> repl
+                    map'
+                with
+                | exn ->
+                    try Error exn |> repl with _ -> ()
+                    map
+
+            let fromState repl fn =
+                mapState repl (fun map -> map, fn map)
+
+            let getValue repl key = fromState repl (Map.tryFind key)
+
+            let putValue repl key value = mapState repl (fun map ->
+                let value' = updateValueKey key value
+                let map' = map |> Map.add key value'
+                map', ()
+            )
+
+            let delValue repl key = mapState repl (fun map ->
+                let map' = map |> Map.remove key
+                map', ()
+            )
+            
+            let mailbox = MailboxProcessor.Start(fun mb ->
+                let rec loop map = async {
+                    let! cmd = MBox.receiveFrom mb
+                    let transform =
+                        match cmd with
+                        | GetValue(key, _, repl) ->
+                            getValue repl key
+                        | PutValue(key, value, _, repl) ->
+                            putValue repl key value
+                        | DelValue(key, _, repl) ->
+                            delValue repl key
+                    return! map |> transform |> loop
+                }
+                loop initMap
+            )
+
+            fun cmd -> mailbox |> MBox.post cmd
+
+    module Validated =
+        type Options<'k, 't> = {
+            validateKey: AsyncFn<'k, unit>
+            validateValue: AsyncFn<'t, unit>
+            store: KeyValueStore<'k, 't>
+        }
+
+        [<RequireQualifiedAccess>]
+        module Options =
+            let create store : Options<'k, 't> = 
+                {
+                    store = store
+                    validateKey = AsyncFn.return' ()
+                    validateValue = AsyncFn.return' ()
+                }
+            let store<'k, 't> : Lens<_, KeyValueStore<'k, 't>> =
+                Lens.cons' (fun o -> o.store) (fun v o -> { o with store = v })
+            let validateKey<'k, 't> : Lens<_, AsyncFn<'k, unit>> =
+                Lens.cons' (fun o -> o.validateKey) (fun v o -> { o with validateKey = v })
+            let validateValue<'k, 't> : Lens<_, AsyncFn<'t, unit>> =
+                Lens.cons' (fun o -> o.validateValue) (fun v o -> { o with validateValue = v })
+
+        let create opts: KeyValueStore<_, _> =
+            let store = opts |> Lens.get Options.store
+            let validateKey = opts |> Lens.get Options.validateKey
+            let validateValue = opts |> Lens.get Options.validateValue
+
+            fun cmd ->
+                let runCmd repl fn =
+                    async {
+                        try
+                            do! fn()
+                            store cmd
+                        with exn ->
+                            try Error exn |> repl with _ -> ()
+                    } |> Async.start
+
+                match cmd with
+                | GetValue(key, _, repl) ->
+                    runCmd repl (fun() -> validateKey key)
+                | PutValue(key, value, _, repl) ->
+                    runCmd repl (fun() -> async {
+                        do! validateKey key
+                        do! validateValue value
+                    })
+                | DelValue(key, _, repl) ->
+                    runCmd repl (fun() -> validateKey key)
+
+
+namespace SharpFunky.Storage.CSharp.KeyValue
+
+open System.Threading
+open System.Threading.Tasks
+open FSharp.Control.Tasks.V2
+open SharpFunky.Storage
+
+type GetValue<'k>(key: 'k) =
+    member val Key = key with get
+
+type GetValueResult<'t>(found: bool, value: 't) =
+    new(value) = GetValueResult(true, value)
+    new() = GetValueResult(false, Unchecked.defaultof<'t>)
+    member val Found = found with get
+    member val Value = value with get
+
+type PutValue<'k, 't>(key: 'k, value: 't) =
+    member val Key = key with get
+    member val Value = value with get
+
+type PutValueResult(success: bool) =
+    new() = PutValueResult(true)
+    member val Success = success with get
+
+type RemoveValue<'k>(key: 'k) =
+    member val Key = key with get
+
+type RemoveValueResult(success: bool) =
+    new() = RemoveValueResult(true)
+    member val Success = success with get
+
+type IKeyValueStore<'k, 't> =
+    abstract GetValueAsync: GetValue<'k> * CancellationToken -> Task<GetValueResult<'t>>
+    abstract PutValueAsync: PutValue<'k, 't> * CancellationToken -> Task<PutValueResult>
+    abstract RemoveValueAsync: RemoveValue<'k> * CancellationToken -> Task<RemoveValueResult>
+
+[<AbstractClass; Sealed>]
+type KeyValueStore() =
+    static member FromFSharp<'k, 't> (store: KeyValue.KeyValueStore<'k, 't>) =
+        let makeTask cToken =
+            let ts = TaskCompletionSource(cToken: CancellationToken)
+            let fn = function
+            | Ok v -> ts.TrySetResult v |> ignore
+            | Error exn -> ts.TrySetException(exn: exn) |> ignore
+            ts.Task, fn
+
+        { new IKeyValueStore<'k, 't> with
+            member __.GetValueAsync(req, cToken) = task {
+                let result, sink = makeTask cToken
+                let cmd = KeyValue.GetValue(req.Key, cToken, sink)
+                do store cmd
+                match! result with
+                | Some value ->
+                    return GetValueResult<'t>(true, value)
+                | None ->
+                    return GetValueResult<'t>()
+            }
+
+            member __.PutValueAsync(req, cToken) = task {
+                let result, sink = makeTask cToken
+                let cmd = KeyValue.PutValue(req.Key, req.Value, cToken, sink)
+                do store cmd
+                do! result
+                return PutValueResult(true)
+            }
+
+            member __.RemoveValueAsync(req, cToken) = task {
+                let result, sink = makeTask cToken
+                let cmd = KeyValue.DelValue(req.Key, cToken, sink)
+                do store cmd
+                do! result
+                return RemoveValueResult(true)
+            }
+        }

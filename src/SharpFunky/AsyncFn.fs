@@ -2,10 +2,12 @@
 
 type AsyncFn<'a, 'b> = 'a -> Async<'b>
 type AsyncMiddleware<'a, 'b> = AsyncFn<'a, 'b> -> AsyncFn<'a, 'b>
+type AsyncSink<'a> = AsyncFn<'a, unit>
 
 module AsyncFn =
     let return' v = fun _ -> Async.return' v
     let raise e = fun _ -> Async.raise e
+    let identity v = Async.return' v
 
     let inline internal applyFn (f: AsyncFn<_, _>) fma: AsyncFn<_, _> = fma >> f
     

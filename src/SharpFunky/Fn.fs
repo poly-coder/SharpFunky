@@ -1,6 +1,7 @@
 ﻿namespace SharpFunky
 
 type Fn<'a, 'b> = 'a -> 'b
+type Sink<'a> = Fn<'a, unit>
 
 module Fn =
     let id : Fn<_, _> = fun a -> a
