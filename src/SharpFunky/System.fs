@@ -34,6 +34,9 @@ module String =
     let trimEndWithAny chars (s: string) = s.TrimEnd(chars |> Seq.toArray)
     let trimEndWith char (s: string) = s.TrimEnd([| char |])
 
+    let indexOf sub (text: string) = text.IndexOf(sub: string)
+    let joinWith sep (strList: string seq) = String.Join(sep, strList)
+
     let toBase64 bytes = bytes |> Convert.ToBase64String
     let fromBase64 str = str |> Convert.FromBase64String
     let fromBase64Opt = Option.catch fromBase64
