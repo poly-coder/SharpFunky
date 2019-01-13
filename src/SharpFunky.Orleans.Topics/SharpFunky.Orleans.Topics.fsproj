@@ -2,29 +2,28 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
-    <Version>0.0.4</Version>
+    <Version>0.0.1</Version>
     <Authors>Iskander Sierra</Authors>
     <Company>poly-coder</Company>
-    <PackageId>SharpFunky.Azure.Storage</PackageId>
-    <Product>SharpFunky.Azure.Storage</Product>
+    <PackageId>SharpFunky.Orleans.Topics</PackageId>
+    <Product>SharpFunky.Orleans.Topics</Product>
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="AzureStorage.fs" />
-    <Compile Include="KeyValueStore.AzureTables.fs" />
-    <Compile Include="KeyValueStore.AzureBlobs.fs" />
-    <Compile Include="StatelessEventStream.AzureTables.fs" />
-    <Compile Include="MessageSubscriber.AzureQueues.fs" />
-    <Compile Include="MessagePublisher.AzureQueues.fs" />
+    <Compile Include="EventStream.fs" />
+    <Compile Include="TopicPropertyManagerGrain.fs" />
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.Orleans.Core.Abstractions" Version="2.2.0" />
+    <PackageReference Include="Microsoft.Orleans.OrleansCodeGenerator" Version="2.2.0" />
+    <PackageReference Include="Newtonsoft.Json" Version="12.0.1" />
     <PackageReference Include="TaskBuilder.fs" Version="2.1.0" />
-    <PackageReference Include="WindowsAzure.Storage" Version="9.3.3" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\SharpFunky.Abstractions\SharpFunky.Abstractions.fsproj" />
+    <ProjectReference Include="..\SharpFunky.Orleans.TopicsInterfaces\SharpFunky.Orleans.TopicsInterfaces.fsproj" />
     <ProjectReference Include="..\SharpFunky\SharpFunky.fsproj" />
   </ItemGroup>
 

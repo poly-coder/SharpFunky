@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
-    <Version>0.0.3</Version>
+    <Version>0.0.4</Version>
     <Authors>Iskander Sierra</Authors>
     <Company>poly-coder</Company>
     <PackageId>SharpFunky.Abstraction</PackageId>
@@ -14,8 +14,9 @@
     <Compile Include="Conversion.fs" />
     <Compile Include="Messaging.fs" />
     <Compile Include="KeyValueStore.fs" />
-    <Compile Include="EventStorage.fs" />
+    <Compile Include="EventStorage.Types.fs" />
     <Compile Include="EventStorage.Stateless.fs" />
+    <Compile Include="EventStorage.fs" />
   </ItemGroup>
 
   <ItemGroup>
