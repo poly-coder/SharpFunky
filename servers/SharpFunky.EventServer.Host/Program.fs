@@ -8,6 +8,21 @@ open FSharp.Control.Tasks.V2
 open SharpFunky.EventServer.Interfaces
 open SharpFunky.EventServer.Azure.Grains
 
+let section name (serv: IServiceProvider) =
+    serv.GetService<IConfigurationRoot>().GetSection(name).Get<_>()
+
+let getEventStreamOptions sectionName (serv: IServiceProvider) =
+    { new ITableEventStreamServiceOptions with
+        member __.loadOptions configName =
+            let config = serv.GetService<IConfigurationRoot>()
+            let subSectionName = sprintf "%s:%s" sectionName configName
+            match config.GetSection(subSectionName) with
+            | null ->
+                invalidArg "configName" (sprintf "Section %s doesn't exist" subSectionName)
+            | subSection ->
+                { connectionString = subSection.Item("connectionString") }
+    }
+
 let buildHost argv =
     let configuration =
         ConfigurationBuilder()
@@ -19,18 +34,15 @@ let buildHost argv =
     SiloHostBuilder()
         .UseLocalhostClustering()
         .ConfigureServices(fun services ->
-            let section name (serv: IServiceProvider) =
-                serv.GetService<IConfigurationRoot>().GetSection(name).Get<_>()
             services
                 .AddSingleton<IConfigurationRoot>(configuration)
                 .AddSingleton<BlobKeyValueStoreOptions>(section "BlobKeyValueStore")
-                .AddSingleton<TableEventStreamOptions>(section "TableEventStream")
+                .AddSingleton<ITableEventStreamServiceOptions>(getEventStreamOptions "EventStreamServices")
             |> ignore
         )
         .ConfigureApplicationParts(fun parts ->
             parts
                 .AddApplicationPart(typeof<BlobKeyValueStoreGrain>.Assembly)
-                // .AddApplicationPart(typeof<Command>.Assembly)
                 .AddApplicationPart(typeof<IKeyValueStoreGrain>.Assembly)
                 .WithCodeGeneration() 
             |> ignore

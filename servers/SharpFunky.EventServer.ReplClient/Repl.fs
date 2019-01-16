@@ -58,7 +58,7 @@ let runCommandRepl services rootRun =
                         match! current.run context with
                         | PushContext (newPrompt, newRun) ->
                             let newContext = {
-                                prompt = sprintf "%s %s" current.prompt newPrompt
+                                prompt = sprintf "%s/%s" current.prompt newPrompt
                                 run = newRun
                             }
                             let stack'' = newContext :: stack

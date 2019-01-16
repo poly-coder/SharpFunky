@@ -10,6 +10,9 @@
     <None Include="appsettings.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <Compile Include="Common.fs" />
+    <Compile Include="KVStore.fs" />
+    <Compile Include="Events.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 
@@ -27,7 +30,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\samples\SharpFunky.EventServer.Azure.Grains\SharpFunky.EventServer.Azure.Grains.fsproj" />
     <ProjectReference Include="..\..\src\SharpFunky\SharpFunky.fsproj" />
+    <ProjectReference Include="..\SharpFunky.EventServer.Grains\SharpFunky.EventServer.Grains.fsproj" />
     <ProjectReference Include="..\SharpFunky.EventServer.Interfaces\SharpFunky.EventServer.Interfaces.fsproj" />
   </ItemGroup>
 

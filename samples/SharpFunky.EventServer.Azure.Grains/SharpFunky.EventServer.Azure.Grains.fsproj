@@ -6,7 +6,7 @@
 
   <ItemGroup>
     <Compile Include="BlobKeyValueStore.fs" />
-    <Compile Include="EventStream.fs" />
+    <Compile Include="TableEventStream.fs" />
   </ItemGroup>
 
   <ItemGroup>
