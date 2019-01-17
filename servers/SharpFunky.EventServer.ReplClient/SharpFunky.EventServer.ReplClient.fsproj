@@ -30,8 +30,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\samples\SharpFunky.EventServer.Azure.Grains\SharpFunky.EventServer.Azure.Grains.fsproj" />
     <ProjectReference Include="..\..\src\SharpFunky\SharpFunky.fsproj" />
+    <ProjectReference Include="..\SharpFunky.EventServer.Azure.Grains\SharpFunky.EventServer.Azure.Grains.fsproj" />
     <ProjectReference Include="..\SharpFunky.EventServer.Grains\SharpFunky.EventServer.Grains.fsproj" />
     <ProjectReference Include="..\SharpFunky.EventServer.Interfaces\SharpFunky.EventServer.Interfaces.fsproj" />
   </ItemGroup>

@@ -2,7 +2,9 @@
 open Microsoft.Extensions.Logging
 open Microsoft.Extensions.Configuration
 open Microsoft.Extensions.DependencyInjection
+open Microsoft.Extensions.DependencyInjection.Extensions
 open Orleans
+open Orleans.Runtime
 open Orleans.Hosting
 open FSharp.Control.Tasks.V2
 open SharpFunky.EventServer.Interfaces
@@ -48,6 +50,8 @@ let buildHost argv =
             |> ignore
         )
         .ConfigureLogging(fun logging -> logging.AddConsole() |> ignore)
+        .AddSimpleMessageStreamProvider("SMSProvider")
+        .AddMemoryGrainStorage("PubSubStore")
         .Build()
 
 [<EntryPoint>]

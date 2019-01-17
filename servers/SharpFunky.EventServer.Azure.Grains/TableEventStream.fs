@@ -156,7 +156,7 @@ type IEventStreamReaderGrainInternal =
 type TableEventStreamReaderGrain
     (
         grainFactory: IGrainFactory
-    ) as this =
+    ) =
     inherit Grain()
 
     let subs = ObserverSubscriptionManager<IEventStreamReaderGrainObserver>()

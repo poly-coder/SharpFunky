@@ -43,39 +43,39 @@ let runCommandRepl services rootRun =
             | [] -> return! loop stack
 
             | command :: parameters ->
-                match command with
-                | "exit" | "x" ->
-                    return! loop stack'
-                | "quit" | "q" ->
-                    return! loop []
-                | _ ->
-                    try
-                        let context = {
-                            services = services
-                            command = command
-                            parameters = parameters
+                try
+                    let context = {
+                        services = services
+                        command = command
+                        parameters = parameters
+                    }
+                    match! current.run context with
+                    | PushContext (newPrompt, newRun) ->
+                        let newContext = {
+                            prompt = sprintf "%s/%s" current.prompt newPrompt
+                            run = newRun
                         }
-                        match! current.run context with
-                        | PushContext (newPrompt, newRun) ->
-                            let newContext = {
-                                prompt = sprintf "%s/%s" current.prompt newPrompt
-                                run = newRun
-                            }
-                            let stack'' = newContext :: stack
-                            return! loop stack''
-                        | PopContext ->
-                            return! loop stack'
-                        | KeepContext ->
-                            return! loop stack
-                        | ReplaceContext run' ->
-                            let next = { current with run = run' }
-                            return! loop (next :: stack')
-                        | UnknownCommand helpMessage ->
-                            printfn "Unknown command: %s" helpMessage
-                            return! loop stack
-                    with exn ->
-                        printfn "Error executing command:\n%O" exn
+                        let stack'' = newContext :: stack
+                        return! loop stack''
+                    | PopContext ->
+                        return! loop stack'
+                    | KeepContext ->
                         return! loop stack
+                    | ReplaceContext run' ->
+                        let next = { current with run = run' }
+                        return! loop (next :: stack')
+                    | UnknownCommand helpMessage ->
+                        match command with
+                        | "exit" | "x" ->
+                            return! loop stack'
+                        | "quit" | "q" ->
+                            return! loop []
+                        | _ ->
+                            printfn "Unknown command: %s" helpMessage
+                        return! loop stack
+                with exn ->
+                    printfn "Error executing command:\n%O" exn
+                    return! loop stack
 
         | [] ->
             return ()

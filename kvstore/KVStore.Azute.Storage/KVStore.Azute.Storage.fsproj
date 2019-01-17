@@ -9,6 +9,15 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="WindowsAzure.Storage" Version="9.3.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\SharpFunky\SharpFunky.fsproj" />
+    <ProjectReference Include="..\KVStore.Abstractions\KVStore.Abstractions.fsproj" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Update="FSharp.Core" Version="4.5.4" />
   </ItemGroup>
 

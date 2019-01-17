@@ -31,8 +31,6 @@
     <ProjectReference Include="..\..\src\SharpFunky.Abstractions\SharpFunky.Abstractions.fsproj" />
     <ProjectReference Include="..\..\src\SharpFunky.Azure.ServiceBus\SharpFunky.Azure.ServiceBus.fsproj" />
     <ProjectReference Include="..\..\src\SharpFunky.Azure.Storage\SharpFunky.Azure.Storage.fsproj" />
-    <ProjectReference Include="..\..\src\SharpFunky.EventSourcing\SharpFunky.EventSourcing.fsproj" />
-    <ProjectReference Include="..\..\src\SharpFunky.Modeling\SharpFunky.Modeling.fsproj" />
     <ProjectReference Include="..\..\src\SharpFunky.Mongo\SharpFunky.Mongo.fsproj" />
     <ProjectReference Include="..\..\src\SharpFunky.NATS\SharpFunky.NATS.fsproj" />
     <ProjectReference Include="..\..\src\SharpFunky\SharpFunky.fsproj" />
