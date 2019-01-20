@@ -17,6 +17,7 @@
     <Compile Include="AsyncFn.fs" />
     <Compile Include="Task.fs" />
     <Compile Include="Lens.fs" />
+    <Compile Include="Converter.fs" />
     <Compile Include="Seq.fs" />
     <Compile Include="Option.fs" />
     <Compile Include="OptLens.fs" />
@@ -33,6 +34,11 @@
     <Compile Include="System.fs" />
     <Compile Include="MBox.fs" />
     <Compile Include="Validation.fs" />
+    <Compile Include="Repl.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="TaskBuilder.fs" Version="2.1.0" />
   </ItemGroup>
 
   <ItemGroup>

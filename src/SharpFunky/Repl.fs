@@ -91,12 +91,3 @@ let subCommands commandMap =
             let keys = commandMap |> Map.toSeq |> Seq.map fst |> String.joinWith ", "
             return UnknownCommand (sprintf "try the following commands: %s" keys)
     }
-
-//let defineCommand parametersFormat matchParameters runCommand (ctx: CommandRunContext) = task {
-//    match matchParameters ctx.parameters with
-//    | Some parameters ->
-//        return! runCommand parameters
-//    | None ->
-//        printfn "Invalid parameters. Try %s %s" ctx.command parametersFormat
-//}
-

@@ -5,19 +5,16 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="BinaryKVStoreServiceImpl.fs" />
+    <Compile Include="BlobKVStore.fs" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Google.Protobuf" Version="3.6.1" />
-    <PackageReference Include="Grpc" Version="1.18.0" />
-    <PackageReference Include="TaskBuilder.fs" Version="2.1.0" />
+    <PackageReference Include="WindowsAzure.Storage" Version="9.3.3" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\SharpFunky\SharpFunky.fsproj" />
     <ProjectReference Include="..\KVStore.Abstractions\KVStore.Abstractions.fsproj" />
-    <ProjectReference Include="..\KVStore.Protocols\KVStore.Protocols.csproj" />
   </ItemGroup>
 
   <ItemGroup>

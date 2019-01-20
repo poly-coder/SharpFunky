@@ -67,21 +67,24 @@ let whenAll source =
     |> map Array.toSeq
 
 let toPromise a =
-    let value = ref None
-    let locker = obj()
-    async {
-        match !value with
-        | Some v -> return v
-        | None ->
-            return! lock locker <| fun () -> async {
-                match !value with
-                | Some v -> return v
-                | None ->
-                    let! v = a
-                    value := Some v
-                    return v
-            }
-    }
+    a
+    |> Async.StartAsTask
+    |> Async.AwaitTask
+    //let value = ref None
+    //let locker = obj()
+    //async {
+    //    match !value with
+    //    | Some v -> return v
+    //    | None ->
+    //        return! lock locker <| fun () -> async {
+    //            match !value with
+    //            | Some v -> return v
+    //            | None ->
+    //                let! v = a
+    //                value := Some v
+    //                return v
+    //        }
+    //}
 
 module Infix =
     let inline (>>=) ma f = ma |> bind f

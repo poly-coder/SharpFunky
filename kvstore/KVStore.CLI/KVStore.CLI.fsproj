@@ -1,11 +1,13 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>netcoreapp2.1</TargetFramework>
+    <AssemblyName>kvscli</AssemblyName>
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="BinaryKVStoreServiceImpl.fs" />
+    <Compile Include="Program.fs" />
   </ItemGroup>
 
   <ItemGroup>
@@ -17,6 +19,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\SharpFunky\SharpFunky.fsproj" />
     <ProjectReference Include="..\KVStore.Abstractions\KVStore.Abstractions.fsproj" />
+    <ProjectReference Include="..\KVStore.Clients\KVStore.Clients.fsproj" />
     <ProjectReference Include="..\KVStore.Protocols\KVStore.Protocols.csproj" />
   </ItemGroup>
 

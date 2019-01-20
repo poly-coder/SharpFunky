@@ -9,8 +9,9 @@ message GetValueRequest {
 }
 
 message GetValueResponse {
-  bool found = 1;
-  bytes value = 2;
+  bool success = 1;
+  bool found = 2;
+  bytes value = 3;
 }
 
 message PutValueRequest {

@@ -60,3 +60,27 @@ module KVStoreExtensions =
 
         | DoDeleteValue(key, sink) ->
             execute sink <| fun () -> service.deleteValue key
+
+    let convertedService
+        (keyConverter: Converter<'k, 'K>)
+        (valueConverter: Converter<'v, 'V>)
+        (service: IKVStoreService<'K, 'V>) =
+
+        { new IKVStoreService<_, _> with
+            member this.getValue key = async {
+                let key' = key |> Converter.forward keyConverter
+                let! value' = service.getValue key'
+                return value' |> Option.map (Converter.backward valueConverter)
+            }
+
+            member this.putValue key value = async {
+                let key' = key |> Converter.forward keyConverter
+                let value' = value |> Converter.forward valueConverter
+                return! service.putValue key' value'
+            }
+
+            member this.deleteValue key = async {
+                let key' = key |> Converter.forward keyConverter
+                return! service.deleteValue key'
+            }
+        }

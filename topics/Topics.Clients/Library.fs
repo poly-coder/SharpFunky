@@ -1,4 +1,4 @@
-namespace KVStore.Services
+namespace Topics.Clients
 
 module Say =
     let hello name =

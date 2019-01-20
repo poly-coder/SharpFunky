@@ -39,22 +39,31 @@ module String =
 
     let toBase64 bytes = bytes |> Convert.ToBase64String
     let fromBase64 str = str |> Convert.FromBase64String
-    let fromBase64Opt = Option.catch fromBase64
-    let fromBase64Res = Result.catch fromBase64
+    let base64Converter = Converter.cons toBase64 fromBase64
 
     let toEncoding (encoding: Encoding) (str: string) = str |> encoding.GetBytes
     let fromEncoding (encoding: Encoding) bytes = bytes |> encoding.GetString
+    let encodingConverter encoding = Converter.cons (toEncoding encoding) (fromEncoding encoding)
 
     let toUtf8 = toEncoding Encoding.UTF8
     let fromUtf8 = fromEncoding Encoding.UTF8
+    let utf8Converter = Converter.cons toUtf8 fromUtf8
+
     let toUtf7 = toEncoding Encoding.UTF7
     let fromUtf7 = fromEncoding Encoding.UTF7
+    let utf7Converter = Converter.cons toUtf7 fromUtf7
+
     let toUtf32 = toEncoding Encoding.UTF32
     let fromUtf32 = fromEncoding Encoding.UTF32
+    let utf32Converter = Converter.cons toUtf32 fromUtf32
+
     let toUnicode = toEncoding Encoding.Unicode
     let fromUnicode = fromEncoding Encoding.Unicode
+    let unicodeConverter = Converter.cons toUnicode fromUnicode
+
     let toAscii = toEncoding Encoding.ASCII
     let fromAscii = fromEncoding Encoding.ASCII
+    let asciiConverter = Converter.cons toAscii fromAscii
 
     let isMatch regex =
         let expression = Regex(regex)

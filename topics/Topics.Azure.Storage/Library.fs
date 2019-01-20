@@ -1,4 +1,4 @@
-namespace KVStore.Azute.Storage
+namespace Topics.Azure.Storage
 
 module Say =
     let hello name =
