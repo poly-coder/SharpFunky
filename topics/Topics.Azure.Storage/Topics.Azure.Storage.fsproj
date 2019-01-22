@@ -5,11 +5,16 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="Library.fs" />
+    <Compile Include="TablePartitionDataStore.fs" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="WindowsAzure.Storage" Version="9.3.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\SharpFunky\SharpFunky.fsproj" />
+    <ProjectReference Include="..\Topics.Abstractions\Topics.Abstractions.fsproj" />
   </ItemGroup>
 
   <ItemGroup>
