@@ -1,0 +1,104 @@
+﻿syntax = "proto3";
+
+option csharp_namespace = "Topics.Protocols.MessageTopics";
+
+package Topics.Protocols.MessageTopics;
+
+message TopicMessage {
+  bytes content = 1;
+  map<string, string> metadata = 2;
+  string messageId = 3;
+}
+
+message PersistedTopicMessage {
+  bytes content = 1;
+  map<string, string> metadata = 2;
+  string messageId = 3;
+  uint64 sequence = 4;
+}
+
+message QuotaAssigned {
+  int32 quota = 1;
+}
+
+message CreateRequest {
+  string topicId = 1;
+}
+
+message CreateResponse {
+  string topicId = 1;
+  bool created = 2;
+}
+
+message RemoveRequest {
+  string topicId = 1;
+}
+
+message RemoveResponse {
+  string topicId = 1;
+  bool removed = 2;
+}
+
+message GetStatusRequest {
+  string topicId = 1;
+}
+
+message GetStatusResponse {
+  string topicId = 1;
+  bool exists = 2;
+  uint64 nextSequence = 3;
+}
+
+message PublishRequest {
+  oneof payload {
+    PublishInit init = 1;
+    PublishMessages messages = 2;
+  }
+}
+
+message PublishInit {
+  string topicId = 1;
+}
+
+message PublishMessages {
+  repeated TopicMessage messages = 1;
+}
+
+message PublishResponse {
+  oneof payload {
+    bool initialized = 1;
+    QuotaAssigned quota = 2;
+  }
+}
+
+message ReadRequest {
+  oneof payload {
+    ReadInit init = 1;
+    QuotaAssigned quota = 2;
+  }
+}
+
+message ReadInit {
+  string topicId = 1;
+  uint64 startFromSequence = 2;
+}
+
+message ReadMessages {
+  repeated PersistedTopicMessage messages = 1;
+  bool endOfTopic = 2;
+}
+
+message ReadResponse {
+  oneof payload {
+    bool initialized = 1;
+    ReadMessages messages = 2;
+  }
+}
+
+service MessageTopicService {
+  rpc Create(CreateRequest) returns (CreateResponse);
+  rpc Remove(RemoveRequest) returns (RemoveResponse);
+  rpc GetStatus(GetStatusRequest) returns (GetStatusResponse);
+  rpc Publish(stream PublishRequest) returns (stream PublishResponse);
+  rpc Read(stream ReadRequest) returns (stream ReadResponse);
+}

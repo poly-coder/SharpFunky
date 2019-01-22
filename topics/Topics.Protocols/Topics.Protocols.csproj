@@ -4,4 +4,22 @@
     <TargetFramework>netstandard2.0</TargetFramework>
   </PropertyGroup>
 
+  <ItemGroup>
+    <None Remove="proto\MessageTopic.proto" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Google.Protobuf" Version="3.6.1" />
+    <PackageReference Include="Google.Protobuf.Tools" Version="3.6.1" />
+    <PackageReference Include="Grpc" Version="1.18.0" />
+    <PackageReference Include="Grpc.Tools" Version="1.18.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProtoBuf Include="proto\MessageTopic.proto" />
+  </ItemGroup>
+
 </Project>
