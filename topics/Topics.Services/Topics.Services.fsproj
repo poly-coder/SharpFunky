@@ -5,7 +5,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="Library.fs" />
+    <Compile Include="BinaryDataStoreServiceImpl.fs" />
   </ItemGroup>
 
   <ItemGroup>
@@ -16,6 +16,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\SharpFunky\SharpFunky.fsproj" />
+    <ProjectReference Include="..\Topics.Abstractions\Topics.Abstractions.fsproj" />
+    <ProjectReference Include="..\Topics.Protocols\Topics.Protocols.csproj" />
   </ItemGroup>
 
   <ItemGroup>

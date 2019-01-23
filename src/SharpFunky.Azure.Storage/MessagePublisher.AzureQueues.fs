@@ -1,57 +1,57 @@
 module SharpFunky.Messaging.MessagePublisher.AzureQueues
 
-open SharpFunky
-open SharpFunky.Conversion
-open SharpFunky.Messaging
-open Microsoft.WindowsAzure.Storage.Queue
+//open SharpFunky
+//open SharpFunky.Conversion
+//open SharpFunky.Messaging
+//open Microsoft.WindowsAzure.Storage.Queue
 
-module AsStringContent =
+//module AsStringContent =
 
-    type Options<'a> = {
-        queue: CloudQueue
-        converter: IAsyncConverter<'a, string>
-    }
+//    type Options<'a> = {
+//        queue: CloudQueue
+//        converter: IAsyncConverter<'a, string>
+//    }
 
-    [<RequireQualifiedAccess>]
-    module Options =
-        let from queue converter = 
-            {
-                queue = queue
-                converter = converter
-            }
+//    [<RequireQualifiedAccess>]
+//    module Options =
+//        let from queue converter = 
+//            {
+//                queue = queue
+//                converter = converter
+//            }
 
-    let create opts =
+//    let create opts =
     
-        let publish message = async {
-            let! data = opts.converter.convert message
-            let msg = CloudQueueMessage(data)
-            do! opts.queue.AddMessageAsync(msg) |> Async.ofTaskVoid
-        }
+//        let publish message = async {
+//            let! data = opts.converter.convert message
+//            let msg = CloudQueueMessage(data)
+//            do! opts.queue.AddMessageAsync(msg) |> Async.ofTaskVoid
+//        }
 
-        MessagePublisher.createInstance publish
+//        MessagePublisher.createInstance publish
 
-module AsBinaryContent =
+//module AsBinaryContent =
 
-    type Options<'a> = {
-        queue: CloudQueue
-        converter: IAsyncConverter<'a, byte[]>
-    }
+//    type Options<'a> = {
+//        queue: CloudQueue
+//        converter: IAsyncConverter<'a, byte[]>
+//    }
 
-    [<RequireQualifiedAccess>]
-    module Options =
-        let from queue converter = 
-            {
-                queue = queue
-                converter = converter
-            }
+//    [<RequireQualifiedAccess>]
+//    module Options =
+//        let from queue converter = 
+//            {
+//                queue = queue
+//                converter = converter
+//            }
 
-    let create opts =
+//    let create opts =
     
-        let publish message = async {
-            let! data = opts.converter.convert message
-            let msg = CloudQueueMessage.CreateCloudQueueMessageFromByteArray(data)
-            do! opts.queue.AddMessageAsync(msg) |> Async.ofTaskVoid
-        }
+//        let publish message = async {
+//            let! data = opts.converter.convert message
+//            let msg = CloudQueueMessage.CreateCloudQueueMessageFromByteArray(data)
+//            do! opts.queue.AddMessageAsync(msg) |> Async.ofTaskVoid
+//        }
 
-        MessagePublisher.createInstance publish
+//        MessagePublisher.createInstance publish
 

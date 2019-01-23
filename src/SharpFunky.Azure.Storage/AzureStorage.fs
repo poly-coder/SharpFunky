@@ -1,11 +1,13 @@
 ﻿module SharpFunky.AzureStorage
 
+open System
 open System.Collections.Generic
+open System.Threading.Tasks
 open Microsoft.WindowsAzure.Storage
 open FSharp.Control.Tasks.V2
-open System.Threading.Tasks
 open SharpFunky
 
+[<RequireQualifiedAccess>]
 module Account =
     let parse connectionString = CloudStorageAccount.Parse(connectionString)
     let tryParse connectionString = CloudStorageAccount.TryParse(connectionString) |> Option.ofTryOp
@@ -14,6 +16,25 @@ module Account =
     let fileClient (account: CloudStorageAccount) = account.CreateCloudFileClient()
     let queueClient (account: CloudStorageAccount) = account.CreateCloudQueueClient()
     let tableClient (account: CloudStorageAccount) = account.CreateCloudTableClient()
+
+
+let rec getStorageExceptions (exn: exn) =
+    match exn with
+    | :? StorageException as exn -> seq { yield exn }
+    | :? AggregateException as exn ->
+        seq {
+            for child in exn.InnerExceptions do
+                yield! getStorageExceptions child
+        }
+    | _ -> Seq.empty
+
+let getErrorCodes exn =
+    getStorageExceptions exn
+    |> Seq.map (fun e -> e.RequestInformation.ErrorCode)
+
+let isErrorCode errorCode exn =
+    getErrorCodes exn
+    |> Seq.exists ((=) errorCode)
 
 let fromSegmented
     (initToken: 'continuationToken)
@@ -112,6 +133,9 @@ module Tables =
     let executeBatch batch (table: CloudTable) =
         table.ExecuteBatchAsync(batch)
 
+    let createBatch operations =
+        TableBatchOperation()
+        |> tee (fun batch -> Seq.iter (fun op -> batch.Add(op)) operations)
 
     let executeRetrieve partitionKey rowKey (table: CloudTable) = task {
         let! result = execute (retrieve partitionKey rowKey) table
@@ -122,42 +146,62 @@ module Tables =
 
     let executeQuerySegmented continuationToken (query: TableQuery) (table: CloudTable) =
         table.ExecuteQuerySegmentedAsync(query, continuationToken)
-
-    let executeQuerySegmentedOf continuationToken (query: TableQuery<_>) (table: CloudTable) =
-        table.ExecuteQuerySegmentedAsync(query, continuationToken)
+    let executeSegment query table = executeQuerySegmented null query table
     
-    let executeQuerySegmentedResolver (resolver: EntityResolver<_>) continuationToken (query: TableQuery) (table: CloudTable) =
-        table.ExecuteQuerySegmentedAsync(query, resolver, continuationToken)
-
-    let executeQuerySegmentedResolverOf (resolver: EntityResolver<_>) continuationToken (query: TableQuery<_>) (table: CloudTable) =
-        table.ExecuteQuerySegmentedAsync(query, resolver, continuationToken)
-
-
     let internal getQueryContToken (s: TableQuerySegment) = s.ContinuationToken
     let internal getQueryResults (s: TableQuerySegment) = s.Results |> Seq.map id
-    let internal getQueryContTokenOf (s: TableQuerySegment<_>) = s.ContinuationToken
-    let internal getQueryResultsOf (s: TableQuerySegment<_>) = s.Results |> Seq.map id
 
     let executeQuery query table =
         fun token -> executeQuerySegmented token query table
         |> fromSegmented null getQueryContToken getQueryResults isNull
 
-    let executeQueryOf query table =
-        fun token -> executeQuerySegmentedOf token query table
-        |> fromSegmented null getQueryContTokenOf getQueryResultsOf isNull
+    [<RequireQualifiedAccess>]
+    module Of =
+        let executeQuerySegmented continuationToken (query: TableQuery<_>) (table: CloudTable) =
+            table.ExecuteQuerySegmentedAsync(query, continuationToken)
+        let executeSegment query table = executeQuerySegmented null query table
 
-    let executeQueryResolver resolver query table =
-        fun token -> executeQuerySegmentedResolver resolver token query table
-        |> fromSegmented null getQueryContTokenOf getQueryResultsOf isNull
+        let executeQuerySegmentedResolver (resolver: EntityResolver<_>) continuationToken (query: TableQuery<_>) (table: CloudTable) =
+            table.ExecuteQuerySegmentedAsync(query, resolver, continuationToken)
+        let executeSegmentResolver resolver query table = executeQuerySegmentedResolver resolver null query table
 
-    let executeQueryResolverOf resolver query table =
-        fun token -> executeQuerySegmentedResolverOf resolver token query table
-        |> fromSegmented null getQueryContTokenOf getQueryResultsOf isNull
+        let internal getQueryContToken (s: TableQuerySegment<_>) = s.ContinuationToken
+        let internal getQueryResults (s: TableQuerySegment<_>) = s.Results |> Seq.map id
 
+        let executeQuery query table =
+            fun token -> executeQuerySegmented token query table
+            |> fromSegmented null getQueryContToken getQueryResults isNull
 
-    let SystemKeys = ["PartitionKey"; "RowKey"; "Timestamp"; "ETag"] |> Set.ofList
+        let executeQueryResolver resolver query table =
+            fun token -> executeQuerySegmentedResolver resolver token query table
+            |> fromSegmented null getQueryContToken getQueryResults isNull
 
+    [<Literal>]
+    let PartitionKeyName = "PartitionKey"
+    [<Literal>]
+    let RowKeyName = "RowKey"
+    [<Literal>]
+    let TimestampName = "Timestamp"
+    [<Literal>]
+    let ETagName = "ETag"
+    let SystemKeys = [PartitionKeyName; RowKeyName; TimestampName; ETagName] |> Set.ofList
+
+    [<RequireQualifiedAccess>]
     module Query =
+        let create() = TableQuery()
+        let copy (query: TableQuery) = query.Copy()
+        let where filter (query: TableQuery) = query.Where(filter)
+        let take limit (query: TableQuery) = query.Take(Nullable limit)
+        let select columns (query: TableQuery) = query.Select(columns |> Seq.toArray)
+
+        [<RequireQualifiedAccess>]
+        module Of =
+            let create() = TableQuery<_>()
+            let copy (query: TableQuery<_>) = query.Copy()
+            let where filter (query: TableQuery<_>) = query.Where(filter)
+            let take limit (query: TableQuery<_>) = query.Take(Nullable limit)
+            let select columns (query: TableQuery<_>) = query.Select(columns |> Seq.toArray)
+
         let and' cond1 cond2 = TableQuery.CombineFilters(cond1, TableOperators.And, cond2)
         let or' cond1 cond2 = TableQuery.CombineFilters(cond1, TableOperators.Or, cond2)
         let rec andMany conds =
@@ -260,7 +304,7 @@ module Tables =
             let le columnName value = compare QueryComparisons.LessThanOrEqual columnName value
 
         module PartitionKey =
-            let compare operator value = String.compare operator "PartitionKey" value
+            let compare operator value = String.compare operator PartitionKeyName value
 
             let eq value = compare QueryComparisons.Equal value
             let ne value = compare QueryComparisons.NotEqual value
@@ -270,7 +314,7 @@ module Tables =
             let le value = compare QueryComparisons.LessThanOrEqual value
 
         module RowKey =
-            let compare operator value = String.compare operator "RowKey" value
+            let compare operator value = String.compare operator RowKeyName value
 
             let eq value = compare QueryComparisons.Equal value
             let ne value = compare QueryComparisons.NotEqual value
@@ -290,6 +334,7 @@ module Tables =
             let lt partitionKey rowKey = compare QueryComparisons.LessThan partitionKey rowKey
             let le partitionKey rowKey = compare QueryComparisons.LessThanOrEqual partitionKey rowKey
 
+    [<RequireQualifiedAccess>]
     module EntityProperty =
         open System
 
@@ -343,11 +388,20 @@ module Tables =
         let int64 = OptLens.cons' getInt64 (fun v _ -> makeInt64 v)
 
     let (|StringProperty|_|) prop = EntityProperty.getString prop
+    let (|BinaryProperty|_|) prop = EntityProperty.getBinary prop
     let (|BoolProperty|_|) prop = EntityProperty.getBool prop
+    let (|DateTimeProperty|_|) prop = EntityProperty.getDateTime prop
+    let (|DateTimeOffsetProperty|_|) prop = EntityProperty.getDateTimeOffset prop
+    let (|DoubleProperty|_|) prop = EntityProperty.getDouble prop
+    let (|GuidProperty|_|) prop = EntityProperty.getGuid prop
+    let (|Int32Property|_|) prop = EntityProperty.getInt32 prop
     let (|Int64Property|_|) prop = EntityProperty.getInt64 prop
 
-    module DynamicTableEntity =
+    [<RequireQualifiedAccess>]
+    module Entity =
         open System.Text.RegularExpressions
+
+        let create pk rk = DynamicTableEntity(pk, rk)
 
         let partitionKey: Lens<DynamicTableEntity, _> =
             Lens.cons' (fun e -> e.PartitionKey) (fun v e -> e.PartitionKey <- v; e)
@@ -481,7 +535,7 @@ module Tables =
             |> Seq.map snd
             |> Seq.fold (+) String.empty
 
-
+    [<RequireQualifiedAccess>]
     module With =
         let getServiceProperties requestOptions operationContext (client: CloudTableClient) =
             client.GetServicePropertiesAsync(requestOptions, operationContext)
@@ -525,18 +579,7 @@ module Tables =
             fun token -> executeQuerySegmented requestOptions operationContext token query table
             |> fromSegmented null getQueryContToken getQueryResults isNull
 
-        let executeQueryOf requestOptions operationContext query table =
-            fun token -> executeQuerySegmentedOf requestOptions operationContext token query table
-            |> fromSegmented null getQueryContTokenOf getQueryResultsOf isNull
-
-        let executeQueryResolver requestOptions operationContext resolver query table =
-            fun token -> executeQuerySegmentedResolver requestOptions operationContext resolver token query table
-            |> fromSegmented null getQueryContTokenOf getQueryResultsOf isNull
-
-        let executeQueryResolverOf requestOptions operationContext resolver query table =
-            fun token -> executeQuerySegmentedResolverOf requestOptions operationContext resolver token query table
-            |> fromSegmented null getQueryContTokenOf getQueryResultsOf isNull
-
+    [<RequireQualifiedAccess>]
     module Cancellable =
         let getServiceProperties cancellationToken requestOptions operationContext (client: CloudTableClient) =
             client.GetServicePropertiesAsync(requestOptions, operationContext, cancellationToken)
@@ -579,15 +622,3 @@ module Tables =
         let executeQuery cancellationToken requestOptions operationContext query table =
             fun token -> executeQuerySegmented cancellationToken requestOptions operationContext token query table
             |> fromSegmented null getQueryContToken getQueryResults isNull
-
-        let executeQueryOf cancellationToken requestOptions operationContext query table =
-            fun token -> executeQuerySegmentedOf cancellationToken requestOptions operationContext token query table
-            |> fromSegmented null getQueryContTokenOf getQueryResultsOf isNull
-
-        let executeQueryResolver cancellationToken requestOptions operationContext resolver query table =
-            fun token -> executeQuerySegmentedResolver cancellationToken requestOptions operationContext resolver token query table
-            |> fromSegmented null getQueryContTokenOf getQueryResultsOf isNull
-
-        let executeQueryResolverOf cancellationToken requestOptions operationContext resolver query table =
-            fun token -> executeQuerySegmentedResolverOf cancellationToken requestOptions operationContext resolver token query table
-            |> fromSegmented null getQueryContTokenOf getQueryResultsOf isNull

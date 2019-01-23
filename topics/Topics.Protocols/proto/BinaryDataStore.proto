@@ -1,0 +1,38 @@
+﻿syntax = "proto3";
+
+option csharp_namespace = "Topics.Protocols.BinaryDataStore";
+
+package Topics.Protocols.BinaryDataStore;
+
+message GetNextSequenceRequest {
+}
+
+message GetNextSequenceResponse {
+  uint64 nextSequence = 1;
+}
+
+message AppendRequest {
+  repeated bytes messages = 1;
+}
+
+message AppendResponse {
+  uint64 firstAssignedSequence = 1;
+  uint64 nextSequence = 2;
+}
+
+message ReadRequest {
+  uint64 fromSequence = 1;
+  int32 limit = 2;
+}
+
+message ReadResponse {
+  uint64 nextSequence = 1;
+  repeated bytes messages = 2;
+  bool reachedEnd = 3;
+}
+
+service BinaryDataStoreService {
+  rpc GetNextSequence(GetNextSequenceRequest) returns (GetNextSequenceResponse);
+  rpc Append(AppendRequest) returns (AppendResponse);
+  rpc Read(ReadRequest) returns (ReadResponse);
+}

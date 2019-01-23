@@ -3,6 +3,7 @@ namespace KVStore.Azure.Storage
 open System.IO
 open System.Net
 open SharpFunky
+open SharpFunky.AzureStorage
 open KVStore
 open Microsoft.WindowsAzure.Storage
 open Microsoft.WindowsAzure.Storage.Blob
@@ -18,16 +19,7 @@ type AzureBlobContainerKVStore(options: AzureBlobContainerKVStoreOptions) =
     let account = CloudStorageAccount.Parse(options.StorageConnectionString)
     do NameValidator.ValidateContainerName(options.ContainerName)
 
-    let rec isBlobNotFound (exn: exn) =
-        match exn with
-        | :? StorageException as exn
-            when exn.RequestInformation.HttpStatusCode = int HttpStatusCode.NotFound &&
-                 exn.RequestInformation.ErrorCode = BlobErrorCodeStrings.BlobNotFound ->
-            true
-        | :? AggregateException as exn ->
-            exn.InnerExceptions
-            |> Seq.exists isBlobNotFound
-        | _ -> false
+    let isBlobNotFound = isErrorCode BlobErrorCodeStrings.BlobNotFound
 
     let container =
         async {

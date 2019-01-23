@@ -1,16 +1,14 @@
-open Microsoft.WindowsAzure.Storage
-
-open Microsoft.WindowsAzure.Storage
-
 namespace Topics.Azure.Storage
 
 open System.IO
 open System.Net
 open SharpFunky
+open SharpFunky.AzureStorage
+open SharpFunky.AzureStorage.Tables
 open Topics
 open Microsoft.WindowsAzure.Storage
-open Microsoft.WindowsAzure.Storage.Table
-open Microsoft.WindowsAzure.Storage.Table.Protocol
+//open Microsoft.WindowsAzure.Storage.Table
+//open Microsoft.WindowsAzure.Storage.Table.Protocol
 open System
 
 type AzureTablePartitionBinaryDataStoreOptions = {
@@ -20,6 +18,7 @@ type AzureTablePartitionBinaryDataStoreOptions = {
     statusRowKey: string
     rowKeyPrefix: string
     dataColumnPrefix: string
+    nextSequenceColumnName: string
 } with
     static member defVal = {
         storageConnectionString = "UseDevelopmentStorage=True"
@@ -28,39 +27,50 @@ type AzureTablePartitionBinaryDataStoreOptions = {
         statusRowKey = "A_STATUS"
         rowKeyPrefix = "B_"
         dataColumnPrefix = "Data_"
+        nextSequenceColumnName = "NextSequence"
     }
 
 type AzureTablePartitionBinaryDataStore(options: AzureTablePartitionBinaryDataStoreOptions) =
 
-    let account = CloudStorageAccount.Parse(options.storageConnectionString)
+    let account = Account.parse(options.storageConnectionString)
     do NameValidator.ValidateTableName(options.tableName)
 
-    let rec isTableNotFound (exn: exn) =
-        match exn with
-        | :? StorageException as exn
-            when exn.RequestInformation.HttpStatusCode = int HttpStatusCode.NotFound &&
-                 exn.RequestInformation.ErrorCode = TableErrorCodeStrings.TableNotFound ->
-            true
-        | :? AggregateException as exn ->
-            exn.InnerExceptions
-            |> Seq.exists isTableNotFound
-        | _ -> false
+    let isPartition = Query.PartitionKey.eq options.partitionKey
+    let sequenceRowKey (sequence: uint64) =
+        sprintf "%s%020d" options.rowKeyPrefix sequence
+    let fromSequenceRowKey = sequenceRowKey >> Query.RowKey.ge
+    let rowKeySequence rowKey =
+        rowKey
+        |> String.substringFrom options.rowKeyPrefix.Length
+        |> String.trimStartWith '0'
+        |> function "" -> "0" | s -> s
+        |> UInt64.Parse
 
     let mutable nextSequence = 0UL
     let mutable statusETag = "*"
 
-    let readStatus (table: CloudTable) = async {
+    let readStatus table = async {
         let! result =
-            TableOperation.Retrieve(options.partitionKey, options.statusRowKey)
-            |> table.ExecuteAsync
+            table
+            |> executeRetrieve options.partitionKey options.statusRowKey
             |> Async.AwaitTask
-        match result.Result with
-        | :? DynamicTableEntity as entity ->
-            let nextSequence = entity.Properties.Item("NextSequence").Int64Value.GetValueOrDefault(0L) |> uint64
-            return nextSequence, entity.ETag
+        match result with
+        | Some entity ->
+            let nextSequence =
+                entity
+                |> OptLens.getOpt (Entity.int64 options.nextSequenceColumnName)
+                |> Option.defaultValue 0L
+                |> uint64
+            return nextSequence, Lens.get Entity.etag entity
         | _ ->
             return 0UL, "*"
     }
+
+    let statusToEntity (sequence: uint64) =
+        let nextSequenceProp = int64 sequence |> EntityProperty.forInt64
+        Entity.create options.partitionKey options.statusRowKey
+        |> Lens.set Entity.etag statusETag
+        |> Entity.addProperty options.nextSequenceColumnName nextSequenceProp
 
     let table =
         async {
@@ -71,7 +81,6 @@ type AzureTablePartitionBinaryDataStore(options: AzureTablePartitionBinaryDataSt
                 let! nextSeq, etag = readStatus table
                 nextSequence <- nextSeq
                 statusETag <- etag
-
                 return table
             with exn ->
                 printfn "%O" exn
@@ -80,27 +89,64 @@ type AzureTablePartitionBinaryDataStore(options: AzureTablePartitionBinaryDataSt
 
     interface IDataStoreService<uint64, byte[]> with
         member this.getNextSequence () = async {
-            let! nextSequence' = service.getNextSequence()
-            return nextSequence' |> Converter.backward sequenceConverter
+            return nextSequence
         }
 
         member this.append messages = async {
-            let messages' = messages |> List.map (Converter.forward dataConverter)
-            let! result' = service.append messages'
+            let messageCount = List.length messages
+            if messageCount <= 0 then
+                invalidArg "messages" "Must append at least one message"
+            elif messageCount > 99 then
+                invalidArg "messages" "Cannot append more than 99 messages"
+            let! table = table
+            let batch = 
+                seq {
+                    yield! messages
+                        |> Seq.mapi (fun index message ->
+                            nextSequence + uint64 index
+                            |> sequenceRowKey
+                            |> Entity.create options.partitionKey
+                            |> Lens.set Entity.etag "*"
+                            |> Entity.encodeLargeBinary options.dataColumnPrefix message
+                        )
+                        |> Seq.map insert
+                    yield nextSequence + uint64 messageCount
+                        |> statusToEntity
+                        |> insertOrReplace
+                } |> createBatch
+            let! batchResult = table |> executeBatch batch |> Async.AwaitTask
+            
+            let firstAssignedSequence = nextSequence
+            do nextSequence <- nextSequence + uint64 messageCount
+            do statusETag <- batchResult.Item(batchResult.Count - 1).Etag
             return {
-                firstAssignedSequence = result'.firstAssignedSequence |> Converter.backward sequenceConverter
-                nextSequence = result'.nextSequence |> Converter.backward sequenceConverter
+                firstAssignedSequence = firstAssignedSequence
+                nextSequence = nextSequence
             }
         }
 
         member this.read request = async {
-            let request' = {
-                fromSequence = request.fromSequence |> Converter.forward sequenceConverter
-            }
-            let! response' = service.read request'
+            if request.limit < 1 then
+                return invalidArg "limit" "limit must be a positive integer"
+            let! table = table
+            let query =
+                Query.create()
+                |> Query.where (fromSequenceRowKey request.fromSequence |> Query.and' isPartition)
+                |> Query.take (request.limit |> max 1000)
+            let! segment = executeSegment query table |> Async.AwaitTask
+            let messages =
+                segment
+                |> Seq.map (Entity.decodeLargeBinary options.dataColumnPrefix)
+                |> Seq.toList
+            let nextSequence =
+                segment.Results
+                |> Seq.tryLast
+                |> Option.map (fun e -> 1UL + rowKeySequence e.RowKey)
+                |> Option.defaultValue nextSequence
+                
             return {
-                reachedEnd = response'.reachedEnd
-                nextSequence = response'.nextSequence |> Converter.backward sequenceConverter
-                messages = response'.messages |> List.map (Converter.backward dataConverter)
+                nextSequence = nextSequence
+                messages = messages
+                reachedEnd = isNull segment.ContinuationToken
             }
         }

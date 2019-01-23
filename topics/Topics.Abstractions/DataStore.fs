@@ -9,6 +9,7 @@ type AppendDataResult<'s> = {
 
 type ReadDataRequest<'s> = {
     fromSequence: 's
+    limit: int
 }
 
 type ReadDataResponse<'s, 'a> = {
@@ -101,6 +102,7 @@ module DataStoreExtensions =
             member this.read request = async {
                 let request' = {
                     fromSequence = request.fromSequence |> Converter.forward sequenceConverter
+                    limit = request.limit
                 }
                 let! response' = service.read request'
                 return {

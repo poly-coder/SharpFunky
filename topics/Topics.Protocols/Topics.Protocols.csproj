@@ -5,6 +5,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="proto\BinaryDataStore.proto" />
     <None Remove="proto\MessageTopic.proto" />
   </ItemGroup>
 
@@ -19,6 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProtoBuf Include="proto\BinaryDataStore.proto" />
     <ProtoBuf Include="proto\MessageTopic.proto" />
   </ItemGroup>
 
