@@ -522,7 +522,7 @@ module Tables =
                     let len = toPos - fromPos
                     let segment = text.Substring(fromPos, len)
                     let name = encodeIndexedName prefix index
-                    let prop = EntityProperty.GeneratePropertyForString(segment)
+                    let prop = EntityProperty.forString segment
                     entity |> addProperty name prop |> ignore))
 
         let decodeLargeString prefix (entity: DynamicTableEntity) =
@@ -534,6 +534,23 @@ module Tables =
             |> Seq.sortBy fst
             |> Seq.map snd
             |> Seq.fold (+) String.empty
+
+        let encodeStringMap prefix (map: Map<string, string>) = 
+            tee (fun (entity: DynamicTableEntity) ->
+                map
+                |> Map.toSeq
+                |> Seq.iter (fun (key, value) ->
+                    let name = sprintf "%s%s" prefix key
+                    let prop = EntityProperty.forString value
+                    entity |> addProperty name prop |> ignore))
+
+        let decodeStringMap prefix (entity: DynamicTableEntity) =
+            entity
+            |> getProperties
+            |> filterPrefixedBy prefix
+            |> filterString
+            |> Map.ofSeq
+
 
     [<RequireQualifiedAccess>]
     module With =
@@ -560,7 +577,14 @@ module Tables =
 
         let executeBatch requestOptions operationContext batch (table: CloudTable) =
             table.ExecuteBatchAsync(batch, requestOptions, operationContext)
-        
+
+        let executeRetrieve requestOptions operationContext partitionKey rowKey (table: CloudTable) = task {
+            let! result = execute requestOptions operationContext (retrieve partitionKey rowKey) table
+            match result.Result with
+            | :? DynamicTableEntity as x -> return Some x
+            | _ -> return None
+        }
+
 
         let executeQuerySegmented requestOptions operationContext continuationToken (query: TableQuery) (table: CloudTable) =
             table.ExecuteQuerySegmentedAsync(query, continuationToken, requestOptions, operationContext)
@@ -604,7 +628,13 @@ module Tables =
 
         let executeBatch cancellationToken requestOptions operationContext batch (table: CloudTable) =
             table.ExecuteBatchAsync(batch, requestOptions, operationContext, cancellationToken)
-        
+
+        let executeRetrieve cancellationToken requestOptions operationContext partitionKey rowKey (table: CloudTable) = task {
+            let! result = execute cancellationToken requestOptions operationContext (retrieve partitionKey rowKey) table
+            match result.Result with
+            | :? DynamicTableEntity as x -> return Some x
+            | _ -> return None
+        }
 
         let executeQuerySegmented cancellationToken requestOptions operationContext continuationToken (query: TableQuery) (table: CloudTable) =
             table.ExecuteQuerySegmentedAsync(query, continuationToken, requestOptions, operationContext, cancellationToken)

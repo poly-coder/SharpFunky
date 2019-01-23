@@ -1,0 +1,59 @@
+﻿syntax = "proto3";
+
+option csharp_namespace = "DataStream.Protocols.BinaryDataStream";
+
+package DataStream.Protocols.BinaryDataStream;
+
+message DataItem {
+  uint64 sequence = 1;
+  map<string, string> metadata = 2;
+  bytes content = 3;
+}
+
+message GetStatusRequest {
+  string streamId = 1;
+}
+
+message DataStreamStatus {
+  string streamId = 1;
+  bool exists = 2;
+  map<string, string> metadata = 3;
+  string etag = 4;
+}
+
+message SaveStatusRequest {
+  string streamId = 1;
+  map<string, string> metadata = 2;
+  string etag = 3;
+}
+
+message AppendRequest {
+  string streamId = 1;
+  repeated DataItem items = 2;
+  map<string, string> metadata = 3;
+  string etag = 4;
+}
+
+message AppendResponse {
+  string streamId = 1;
+}
+
+message ReadRequest {
+  string streamId = 1;
+  uint64 fromSequence = 2;
+  int32 limit = 3;
+}
+
+message ReadResponse {
+  string streamId = 1;
+  uint64 nextSequence = 2;
+  repeated DataItem items = 3;
+  bool reachedEnd = 4;
+}
+
+service BinaryDataStoreService {
+  rpc SaveStatus(SaveStatusRequest) returns (DataStreamStatus);
+  rpc GetStatus(GetStatusRequest) returns (DataStreamStatus);
+  rpc Append(AppendRequest) returns (AppendResponse);
+  rpc Read(ReadRequest) returns (ReadResponse);
+}
