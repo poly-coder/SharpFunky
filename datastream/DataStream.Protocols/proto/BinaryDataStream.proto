@@ -61,7 +61,7 @@ message ReadResponse {
   ErrorCode errorCode = 6;
 }
 
-service BinaryDataStoreService {
+service BinaryDataStreamService {
   rpc SaveStatus(SaveStatusRequest) returns (DataStreamStatus);
   rpc GetStatus(GetStatusRequest) returns (DataStreamStatus);
   rpc Append(AppendRequest) returns (DataStreamStatus);

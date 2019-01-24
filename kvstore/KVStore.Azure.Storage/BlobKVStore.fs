@@ -1,5 +1,6 @@
 namespace KVStore.Azure.Storage
 
+open System
 open System.IO
 open System.Net
 open SharpFunky
@@ -8,7 +9,6 @@ open KVStore
 open Microsoft.WindowsAzure.Storage
 open Microsoft.WindowsAzure.Storage.Blob
 open Microsoft.WindowsAzure.Storage.Blob.Protocol
-open System
 
 type AzureBlobContainerKVStoreOptions() =
     member val StorageConnectionString = "UseDevelopmentStorage=True" with get, set
@@ -16,7 +16,7 @@ type AzureBlobContainerKVStoreOptions() =
 
 type AzureBlobContainerKVStore(options: AzureBlobContainerKVStoreOptions) =
 
-    let account = CloudStorageAccount.Parse(options.StorageConnectionString)
+    let account = Account.parse options.StorageConnectionString
     do NameValidator.ValidateContainerName(options.ContainerName)
 
     let isBlobNotFound = isErrorCode BlobErrorCodeStrings.BlobNotFound

@@ -5,79 +5,64 @@ open SharpFunky
 open System.Text.RegularExpressions
 open SharpFunky.Repl
 open DataStream.Protocols.BinaryDataStream
+open DataStream.Clients
 open DataStream
 open Grpc.Core
 
-//let runEnter (ctx: CommandRunContext) = task {
-//    let channelOpt =
-//        match ctx.parameters with
-//        | [hostPort] -> Channel(hostPort, ChannelCredentials.Insecure) |> Some
-//        | [host; port] -> Channel(sprintf "%s:%s" host port, ChannelCredentials.Insecure) |> Some
-//        | _ -> None
+let runConn (ctx: CommandRunContext) = task {
+    let channelOpt =
+        match ctx.parameters with
+        | [hostPort] -> Channel(hostPort, ChannelCredentials.Insecure) |> Some
+        | [host; port] -> Channel(sprintf "%s:%s" host port, ChannelCredentials.Insecure) |> Some
+        | _ -> None
 
-//    match channelOpt with
-//    | None ->
-//        printfn "Try %s <host> <port>" ctx.command
-//        return KeepContext
-//    | Some channel ->
-//        let client = BinaryDataStoreService.BinaryDataStoreServiceClient(channel)
-//        printfn "Connected to DataStream service at %s" channel.Target
+    match channelOpt with
+    | None ->
+        printfn "Try %s <host> <port>" ctx.command
+        return KeepContext
+    | Some channel ->
+        let client = BinaryDataStreamService.BinaryDataStreamServiceClient(channel)
+        let store = BinaryDataStreamClient(client) :> IDataStreamService<uint64, byte[], Map<string, string>>
+        printfn "Connected to DataStream service at %s" channel.Target
 
-//        let runGet (ctx: CommandRunContext) = task {
-//            match ctx.parameters with
-//            | [key] ->
-//                match! kvstore.getValue key with
-//                | Some value ->
-//                    try
-//                        let text = String.fromUtf8 value
-//                        printfn "'%s'" text
-//                    with _ -> 
-//                        let base64 = String.toBase64 value
-//                        printfn "base64:%s" base64
-//                | None ->
-//                    printfn "Not Found"
-//            | _ ->
-//                printfn "Try %s <key>" ctx.command
-//            return KeepContext
-//        }
-//        let runPut (ctx: CommandRunContext) = task {
-//            match ctx.parameters with
-//            | [key; value] ->
-//                let bytes = 
-//                    if String.startsWith "base64:" value then
-//                        String.fromBase64 (String.substringFrom 7 value)
-//                    else
-//                        String.toUtf8 value
-//                do! kvstore.putValue key bytes
-//            | _ ->
-//                printfn "Try %s <key> <value>" ctx.command
-//            return KeepContext
-//        }
-//        let runDelete (ctx: CommandRunContext) = task {
-//            match ctx.parameters with
-//            | [key] ->
-//                do! kvstore.deleteValue key
-//            | _ ->
-//                printfn "Try %s <key>" ctx.command
-//            return KeepContext
-//        }
+        let runStream (ctx: CommandRunContext) = task {
+            match ctx.parameters with
+            | [streamId] ->
+                let runStatus (ctx: CommandRunContext) = task {
+                    let request =
+                        GetStatusReq.empty
+                        |> GetStatusReq.setStreamId streamId
+                    let! status = store.getStatus request
+                    printfn "%A" status
+                    return KeepContext
+                }
 
-//        let prompt = sprintf "bin[%s]" channel.ResolvedTarget
-//        let runner =
-//            [ "status", runStatus ]
-//            |> subCommands
-//        return PushContext(prompt, runner)
-//}
+                let prompt = sprintf "stream[%s]" streamId
+                let runner =
+                    [ "status", runStatus ]
+                    |> subCommands
+                return PushContext(prompt, runner)
+            | _ ->
+                printfn "Try %s <stream>" ctx.command
+                return KeepContext
+        }
 
-//let commands = 
-//    [ "enter", runEnter ]
-//    |> subCommands
+        let prompt = sprintf "store[%s]" channel.ResolvedTarget
+        let runner =
+            [ "stream", runStream ]
+            |> subCommands
+        return PushContext(prompt, runner)
+}
+
+let commands = 
+    [ "conn", runConn ]
+    |> subCommands
 
 [<EntryPoint>]
 let main argv =
-    //let t = task {
-    //    do! runCommandRepl Unchecked.defaultof<_> commands
-    //}
+    let t = task {
+        do! runCommandRepl Unchecked.defaultof<_> commands
+    }
 
-    //t.Wait()
+    t.Wait()
     0 // return an integer exit code
