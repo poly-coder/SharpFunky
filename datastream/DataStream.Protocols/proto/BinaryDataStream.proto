@@ -4,14 +4,20 @@ option csharp_namespace = "DataStream.Protocols.BinaryDataStream";
 
 package DataStream.Protocols.BinaryDataStream;
 
+enum ErrorCode {
+  UNKNOWN_ERROR = 0;
+  ENTITY_TOO_LARGE_ERROR = 1;
+  DUPLICATE_SEQUENCE_ERROR = 2;
+  METADATA_ERROR = 3;
+  DATABASE_NOT_FOUND_ERROR = 4;
+  DATABASE_FULL_ERROR = 5;
+  CONCURRENCY_ERROR = 6;
+}
+
 message DataItem {
   uint64 sequence = 1;
   map<string, string> metadata = 2;
   bytes content = 3;
-}
-
-message GetStatusRequest {
-  string streamId = 1;
 }
 
 message DataStreamStatus {
@@ -19,6 +25,12 @@ message DataStreamStatus {
   bool exists = 2;
   map<string, string> metadata = 3;
   string etag = 4;
+  bool success = 5;
+  ErrorCode errorCode = 6;
+}
+
+message GetStatusRequest {
+  string streamId = 1;
 }
 
 message SaveStatusRequest {
@@ -34,10 +46,6 @@ message AppendRequest {
   string etag = 4;
 }
 
-message AppendResponse {
-  string streamId = 1;
-}
-
 message ReadRequest {
   string streamId = 1;
   uint64 fromSequence = 2;
@@ -49,11 +57,13 @@ message ReadResponse {
   uint64 nextSequence = 2;
   repeated DataItem items = 3;
   bool reachedEnd = 4;
+  bool success = 5;
+  ErrorCode errorCode = 6;
 }
 
 service BinaryDataStoreService {
   rpc SaveStatus(SaveStatusRequest) returns (DataStreamStatus);
   rpc GetStatus(GetStatusRequest) returns (DataStreamStatus);
-  rpc Append(AppendRequest) returns (AppendResponse);
+  rpc Append(AppendRequest) returns (DataStreamStatus);
   rpc Read(ReadRequest) returns (ReadResponse);
 }

@@ -34,7 +34,6 @@
     <Compile Include="System.fs" />
     <Compile Include="MBox.fs" />
     <Compile Include="Validation.fs" />
-    <Compile Include="Repl.fs" />
   </ItemGroup>
 
   <ItemGroup>
@@ -51,7 +50,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Update="FSharp.Core" Version="4.5.4" />
+    <PackageReference Update="FSharp.Core" Version="4.6.0" />
   </ItemGroup>
 
 </Project>

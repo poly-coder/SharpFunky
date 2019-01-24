@@ -5,7 +5,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="BlobKVStore.fs" />
+    <Compile Include="Library.fs" />
   </ItemGroup>
 
   <ItemGroup>
@@ -15,7 +15,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\SharpFunky.Azure.Storage\SharpFunky.Azure.Storage.fsproj" />
     <ProjectReference Include="..\..\src\SharpFunky\SharpFunky.fsproj" />
-    <ProjectReference Include="..\KVStore.Abstractions\KVStore.Abstractions.fsproj" />
+    <ProjectReference Include="..\DataStream.Abstractions\DataStream.Abstractions.fsproj" />
   </ItemGroup>
 
   <ItemGroup>

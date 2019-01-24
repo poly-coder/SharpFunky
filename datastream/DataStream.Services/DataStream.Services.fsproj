@@ -5,7 +5,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="BinaryKVStoreServiceImpl.fs" />
+    <Compile Include="Library.fs" />
   </ItemGroup>
 
   <ItemGroup>
@@ -16,8 +16,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\SharpFunky\SharpFunky.fsproj" />
-    <ProjectReference Include="..\KVStore.Abstractions\KVStore.Abstractions.fsproj" />
-    <ProjectReference Include="..\KVStore.Protocols\KVStore.Protocols.csproj" />
+    <ProjectReference Include="..\DataStream.Abstractions\DataStream.Abstractions.fsproj" />
+    <ProjectReference Include="..\DataStream.Protocols\DataStream.Protocols.csproj" />
   </ItemGroup>
 
   <ItemGroup>

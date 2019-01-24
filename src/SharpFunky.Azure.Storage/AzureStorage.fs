@@ -334,6 +334,9 @@ module Tables =
             let lt partitionKey rowKey = compare QueryComparisons.LessThan partitionKey rowKey
             let le partitionKey rowKey = compare QueryComparisons.LessThanOrEqual partitionKey rowKey
 
+    let (&&&&) cond1 cond2 = Query.and' cond1 cond2
+    let (||||) cond1 cond2 = Query.or' cond1 cond2
+
     [<RequireQualifiedAccess>]
     module EntityProperty =
         open System

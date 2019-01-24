@@ -69,9 +69,19 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Topics.Protocols", "topics\
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "datastream", "datastream", "{93959D63-5585-4DA1-9C16-519106ECF189}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DataStream.Protocols", "datastream\DataStream.Protocols\DataStream.Protocols.csproj", "{63BE6BB6-7367-4E04-85D9-AC2506691655}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DataStream.Protocols", "datastream\DataStream.Protocols\DataStream.Protocols.csproj", "{63BE6BB6-7367-4E04-85D9-AC2506691655}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "DataStream.AzureTable.Host", "datastream\DataStream.AzureTable.Host\DataStream.AzureTable.Host.fsproj", "{A690C194-17CD-43F8-A6C8-3CE3A055C9AF}"
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "DataStream.AzureTable.Host", "datastream\DataStream.AzureTable.Host\DataStream.AzureTable.Host.fsproj", "{A690C194-17CD-43F8-A6C8-3CE3A055C9AF}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "DataStream.CLI", "datastream\DataStream.CLI\DataStream.CLI.fsproj", "{5C94273F-DCED-44FE-84AD-4D63B961CF0F}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "DataStream.Abstractions", "datastream\DataStream.Abstractions\DataStream.Abstractions.fsproj", "{3430E6D0-0BF5-45B8-9FA0-61FFB08A88CF}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "DataStream.Azure.Storage", "datastream\DataStream.Azure.Storage\DataStream.Azure.Storage.fsproj", "{7FB29960-504E-4C65-A4F6-BC4A68ADED8F}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "DataStream.Clients", "datastream\DataStream.Clients\DataStream.Clients.fsproj", "{96299C28-00DE-45D0-9601-40D19B828C8B}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "DataStream.Services", "datastream\DataStream.Services\DataStream.Services.fsproj", "{2F4CA550-653B-41A1-BD5E-FF3E89401616}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -191,6 +201,26 @@ Global
 		{A690C194-17CD-43F8-A6C8-3CE3A055C9AF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A690C194-17CD-43F8-A6C8-3CE3A055C9AF}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A690C194-17CD-43F8-A6C8-3CE3A055C9AF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5C94273F-DCED-44FE-84AD-4D63B961CF0F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5C94273F-DCED-44FE-84AD-4D63B961CF0F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5C94273F-DCED-44FE-84AD-4D63B961CF0F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5C94273F-DCED-44FE-84AD-4D63B961CF0F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3430E6D0-0BF5-45B8-9FA0-61FFB08A88CF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3430E6D0-0BF5-45B8-9FA0-61FFB08A88CF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3430E6D0-0BF5-45B8-9FA0-61FFB08A88CF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3430E6D0-0BF5-45B8-9FA0-61FFB08A88CF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7FB29960-504E-4C65-A4F6-BC4A68ADED8F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7FB29960-504E-4C65-A4F6-BC4A68ADED8F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7FB29960-504E-4C65-A4F6-BC4A68ADED8F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7FB29960-504E-4C65-A4F6-BC4A68ADED8F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{96299C28-00DE-45D0-9601-40D19B828C8B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{96299C28-00DE-45D0-9601-40D19B828C8B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{96299C28-00DE-45D0-9601-40D19B828C8B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{96299C28-00DE-45D0-9601-40D19B828C8B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2F4CA550-653B-41A1-BD5E-FF3E89401616}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2F4CA550-653B-41A1-BD5E-FF3E89401616}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2F4CA550-653B-41A1-BD5E-FF3E89401616}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2F4CA550-653B-41A1-BD5E-FF3E89401616}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -224,6 +254,11 @@ Global
 		{84BCDCFC-9166-4943-888D-E64E870E9A02} = {8CB09DF4-2AB6-4F07-BD43-D07808BE3B53}
 		{63BE6BB6-7367-4E04-85D9-AC2506691655} = {93959D63-5585-4DA1-9C16-519106ECF189}
 		{A690C194-17CD-43F8-A6C8-3CE3A055C9AF} = {93959D63-5585-4DA1-9C16-519106ECF189}
+		{5C94273F-DCED-44FE-84AD-4D63B961CF0F} = {93959D63-5585-4DA1-9C16-519106ECF189}
+		{3430E6D0-0BF5-45B8-9FA0-61FFB08A88CF} = {93959D63-5585-4DA1-9C16-519106ECF189}
+		{7FB29960-504E-4C65-A4F6-BC4A68ADED8F} = {93959D63-5585-4DA1-9C16-519106ECF189}
+		{96299C28-00DE-45D0-9601-40D19B828C8B} = {93959D63-5585-4DA1-9C16-519106ECF189}
+		{2F4CA550-653B-41A1-BD5E-FF3E89401616} = {93959D63-5585-4DA1-9C16-519106ECF189}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {AA95AA36-9D50-4834-B4BB-BCCCA76D8D85}

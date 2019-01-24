@@ -12,13 +12,8 @@
     <Compile Include="Program.fs" />
   </ItemGroup>
 
-  <ItemGroup />
-
   <ItemGroup>
-    <PackageReference Include="Google.Protobuf" Version="3.6.1" />
     <PackageReference Include="Grpc" Version="1.18.0" />
-    <PackageReference Include="TaskBuilder.fs" Version="2.1.0" />
-    <PackageReference Include="WindowsAzure.Storage" Version="9.3.3" />
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="2.2.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="2.2.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.CommandLine" Version="2.2.0" />
@@ -28,13 +23,15 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\SharpFunky.Azure.Storage\SharpFunky.Azure.Storage.fsproj" />
     <ProjectReference Include="..\..\src\SharpFunky\SharpFunky.fsproj" />
+    <ProjectReference Include="..\DataStream.Abstractions\DataStream.Abstractions.fsproj" />
+    <ProjectReference Include="..\DataStream.Azure.Storage\DataStream.Azure.Storage.fsproj" />
     <ProjectReference Include="..\DataStream.Protocols\DataStream.Protocols.csproj" />
+    <ProjectReference Include="..\DataStream.Services\DataStream.Services.fsproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Update="FSharp.Core" Version="4.5.4" />
+    <PackageReference Update="FSharp.Core" Version="4.6.0" />
   </ItemGroup>
 
 </Project>

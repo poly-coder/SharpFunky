@@ -1,11 +1,14 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>netcoreapp2.1</TargetFramework>
+    <AssemblyName>datacli</AssemblyName>
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="BinaryKVStoreServiceImpl.fs" />
+    <Compile Include="Repl.fs" />
+    <Compile Include="Program.fs" />
   </ItemGroup>
 
   <ItemGroup>
@@ -16,8 +19,9 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\SharpFunky\SharpFunky.fsproj" />
-    <ProjectReference Include="..\KVStore.Abstractions\KVStore.Abstractions.fsproj" />
-    <ProjectReference Include="..\KVStore.Protocols\KVStore.Protocols.csproj" />
+    <ProjectReference Include="..\DataStream.Abstractions\DataStream.Abstractions.fsproj" />
+    <ProjectReference Include="..\DataStream.Clients\DataStream.Clients.fsproj" />
+    <ProjectReference Include="..\DataStream.Protocols\DataStream.Protocols.csproj" />
   </ItemGroup>
 
   <ItemGroup>
