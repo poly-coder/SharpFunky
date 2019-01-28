@@ -9,41 +9,41 @@ open Google.Protobuf
 type BinaryKVStoreClient(client: BinaryKVStoreService.BinaryKVStoreServiceClient) =
 
     interface IKVStoreService<string, byte[]> with
-        member this.getValue key = async {
-            let request =
+        member this.getValue request = async {
+            let req =
                 GetValueRequest()
-                |> tee (fun req -> req.Key <- key)
-            let options = CallOptions()
-            let! response = client.GetValueAsync(request, options).ResponseAsync |> Async.AwaitTask
+                |> tee (fun req -> req.Key <- request.key)
+            let options = CallOptions().WithCancellationToken(request.cancellationToken)
+            let! response = client.GetValueAsync(req, options).ResponseAsync |> Async.AwaitTask
             if not response.Success then
                 return invalidOp "Operation failed"
             elif not response.Found then
-                return None
+                return { value = None }
             else
-                return response.Value.ToByteArray() |> Some
+                return { value = response.Value.ToByteArray() |> Some }
         }
 
-        member this.putValue key value = async {
-            let request =
+        member this.putValue request = async {
+            let req =
                 PutValueRequest()
                 |> tee (fun req -> 
-                    do req.Key <- key
-                    do req.Value <- ByteString.CopyFrom value
+                    do req.Key <- request.key
+                    do req.Value <- ByteString.CopyFrom request.value
                 )
-            let options = CallOptions()
-            let! response = client.PutValueAsync(request, options).ResponseAsync |> Async.AwaitTask
+            let options = CallOptions().WithCancellationToken(request.cancellationToken)
+            let! response = client.PutValueAsync(req, options).ResponseAsync |> Async.AwaitTask
             if not response.Success then
                 return invalidOp "Operation failed"
             else
                 return ()
         }
 
-        member this.deleteValue key = async {
-            let request =
+        member this.deleteValue request = async {
+            let req =
                 RemoveValueRequest()
-                |> tee (fun req -> req.Key <- key)
-            let options = CallOptions()
-            let! response = client.RemoveValueAsync(request, options).ResponseAsync |> Async.AwaitTask
+                |> tee (fun req -> req.Key <- request.key)
+            let options = CallOptions().WithCancellationToken(request.cancellationToken)
+            let! response = client.RemoveValueAsync(req, options).ResponseAsync |> Async.AwaitTask
             if not response.Success then
                 return invalidOp "Operation failed"
             else

@@ -67,27 +67,29 @@ type BinaryDataStreamClient(client: BinaryDataStreamService.BinaryDataStreamServ
 
     interface IDataStreamService<uint64, byte[], Map<string, string>> with
         member this.getStatus request = async {
-            let request =
+            let req =
                 GetStatusRequest()
                 |> tee (fun req -> req.StreamId <- request.streamId)
-            let! status = client.GetStatusAsync(request, CallOptions()).ResponseAsync |> Async.AwaitTask
+            let callOptions = CallOptions().WithCancellationToken(request.cancellationToken)
+            let! status = client.GetStatusAsync(req, callOptions).ResponseAsync |> Async.AwaitTask
             return fromStatusResponse status
         }
 
         member this.saveStatus request = async {
-            let request =
+            let req =
                 SaveStatusRequest()
                 |> tee (fun req ->
                     req.StreamId <- request.streamId
                     req.Etag <- request.etag
                     mapToProtobuf req.Metadata request.metadata
                 )
-            let! status = client.SaveStatusAsync(request, CallOptions()).ResponseAsync |> Async.AwaitTask
+            let callOptions = CallOptions().WithCancellationToken(request.cancellationToken)
+            let! status = client.SaveStatusAsync(req, callOptions).ResponseAsync |> Async.AwaitTask
             return fromStatusResponse status
         }
 
         member this.append request = async {
-            let request =
+            let req =
                 AppendRequest()
                 |> tee (fun req ->
                     req.StreamId <- request.streamId
@@ -95,19 +97,29 @@ type BinaryDataStreamClient(client: BinaryDataStreamService.BinaryDataStreamServ
                     itemsToProtobuf req.Items request.items
                     mapToProtobuf req.Metadata request.metadata
                 )
-            let! status = client.AppendAsync(request, CallOptions()).ResponseAsync |> Async.AwaitTask
+            let callOptions = CallOptions().WithCancellationToken(request.cancellationToken)
+            let! status = client.AppendAsync(req, callOptions).ResponseAsync |> Async.AwaitTask
             return fromStatusResponse status
         }
 
         member this.read request = async {
-            let request =
+            let req =
                 ReadRequest()
                 |> tee (fun req ->
                     req.StreamId <- request.streamId
                     req.FromSequence <- request.fromSequence
                     req.Limit <- request.limit
+                    req.ReadOnlyMetadata <- request.readOnlyMetadata
+                    request.filter
+                    |> Seq.iter (fun (key, filter) -> 
+                        let pair = FilterPair()
+                        pair.Key <- key
+                        pair.Filter <- filter
+                        req.Filter.Add(pair)
+                    )
                 )
-            let! response = client.ReadAsync(request, CallOptions()).ResponseAsync |> Async.AwaitTask
+            let callOptions = CallOptions().WithCancellationToken(request.cancellationToken)
+            let! response = client.ReadAsync(req, callOptions).ResponseAsync |> Async.AwaitTask
             if response.Success then
                 return {
                     nextSequence = response.NextSequence

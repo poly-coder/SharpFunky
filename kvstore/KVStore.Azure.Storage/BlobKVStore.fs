@@ -34,30 +34,53 @@ type AzureBlobContainerKVStore(options: AzureBlobContainerKVStoreOptions) =
         } |> Async.toPromise
 
     interface IKVStoreService<string, byte[]> with
-        member this.getValue key = async {
-            do NameValidator.ValidateBlobName(key)
+        member this.getValue request = async {
+            do NameValidator.ValidateBlobName(request.key)
             let! container = container
-            let blob = container.GetBlockBlobReference(key)
+            let blob = container.GetBlockBlobReference(request.key)
             use mem = new MemoryStream()
             try
-                do! blob.DownloadToStreamAsync(mem) |> Async.AwaitTask
-                return mem.ToArray() |> Some
+                do! blob.DownloadToStreamAsync(
+                        mem,
+                        AccessCondition.GenerateEmptyCondition(),
+                        BlobRequestOptions(),
+                        OperationContext(),
+                        request.cancellationToken
+                    ) |> Async.AwaitTask
+                return {
+                    value = mem.ToArray() |> Some
+                }
             with
-            | exn when isBlobNotFound exn -> return None
+            | exn when isBlobNotFound exn -> return { value = None }
             | exn -> return raise exn
         }
 
-        member this.putValue key value = async {
-            do NameValidator.ValidateBlobName(key)
+        member this.putValue request = async {
+            do NameValidator.ValidateBlobName(request.key)
             let! container = container
-            let blob = container.GetBlockBlobReference(key)
-            do! blob.UploadFromByteArrayAsync(value, 0, value.Length) |> Async.AwaitTask
+            let blob = container.GetBlockBlobReference(request.key)
+            do! blob.UploadFromByteArrayAsync(
+                    request.value,
+                    0,
+                    request.value.Length,
+                    AccessCondition.GenerateEmptyCondition(),
+                    BlobRequestOptions(),
+                    OperationContext(),
+                    request.cancellationToken
+                ) |> Async.AwaitTask
         }
 
-        member this.deleteValue key = async {
-            do NameValidator.ValidateBlobName(key)
+        member this.deleteValue request = async {
+            do NameValidator.ValidateBlobName(request.key)
             let! container = container
-            let blob = container.GetBlockBlobReference(key)
-            let! _ = blob.DeleteIfExistsAsync() |> Async.AwaitTask
+            let blob = container.GetBlockBlobReference(request.key)
+            let! _ =
+                blob.DeleteIfExistsAsync(
+                    DeleteSnapshotsOption.IncludeSnapshots,
+                    AccessCondition.GenerateEmptyCondition(),
+                    BlobRequestOptions(),
+                    OperationContext(),
+                    request.cancellationToken
+                ) |> Async.AwaitTask
             return ()
         }

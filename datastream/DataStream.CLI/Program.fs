@@ -28,6 +28,7 @@ let runConn (ctx: CommandRunContext) = task {
         let runStream (ctx: CommandRunContext) = task {
             match ctx.parameters with
             | [streamId] ->
+
                 let runStatus (ctx: CommandRunContext) = task {
                     let request =
                         GetStatusReq.empty
@@ -37,9 +38,55 @@ let runConn (ctx: CommandRunContext) = task {
                     return KeepContext
                 }
 
+                let runSave (ctx: CommandRunContext) = task {
+                    match ctx.parameters with
+                    | MapParameters(metadata, []) ->
+                        let request =
+                            GetStatusReq.empty
+                            |> GetStatusReq.setStreamId streamId
+                        let! status = store.getStatus request
+                        printfn "previous %A" status
+
+                        let request =
+                            SaveStatusReq.empty metadata
+                            |> SaveStatusReq.setStreamId streamId
+                            |> SaveStatusReq.setEtag status.etag
+
+                        let! status = store.saveStatus request
+                        printfn "%A" status
+                        return KeepContext
+                    | _ ->
+                        printfn "Try %s <key1=value1> ..." ctx.command
+                        return KeepContext
+                }
+
+                let runAppend (ctx: CommandRunContext) = task {
+                    match ctx.parameters with
+                    | MapParameters(metadata, []) ->
+                        let request =
+                            GetStatusReq.empty
+                            |> GetStatusReq.setStreamId streamId
+                        let! status = store.getStatus request
+                        printfn "previous %A" status
+
+                        let request =
+                            SaveStatusReq.empty metadata
+                            |> SaveStatusReq.setStreamId streamId
+                            |> SaveStatusReq.setEtag status.etag
+
+                        let! status = store.saveStatus request
+                        printfn "%A" status
+                        return KeepContext
+                    | _ ->
+                        printfn "Try %s <key1=value1> ..." ctx.command
+                        return KeepContext
+                }
+
                 let prompt = sprintf "stream[%s]" streamId
                 let runner =
-                    [ "status", runStatus ]
+                    [ "status", runStatus
+                      "save", runSave 
+                      "append", runAppend ]
                     |> subCommands
                 return PushContext(prompt, runner)
             | _ ->

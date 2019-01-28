@@ -5,7 +5,6 @@ open FSharp.Control.Tasks.V2
 open SharpFunky
 open SharpFunky.Repl
 open Grpc.Core
-open System.Transactions
 open KVStore.Protocols.BinaryKVStore
 open KVStore.Clients
 open KVStore
@@ -29,7 +28,8 @@ let runConnectBin (ctx: CommandRunContext) = task {
         let runGet (ctx: CommandRunContext) = task {
             match ctx.parameters with
             | [key] ->
-                match! kvstore.getValue key with
+                let! response = kvstore.getValue (GetValueReq.create key)
+                match response.value with
                 | Some value ->
                     try
                         let text = String.fromUtf8 value
@@ -43,6 +43,7 @@ let runConnectBin (ctx: CommandRunContext) = task {
                 printfn "Try %s <key>" ctx.command
             return KeepContext
         }
+
         let runPut (ctx: CommandRunContext) = task {
             match ctx.parameters with
             | [key; value] ->
@@ -51,15 +52,16 @@ let runConnectBin (ctx: CommandRunContext) = task {
                         String.fromBase64 (String.substringFrom 7 value)
                     else
                         String.toUtf8 value
-                do! kvstore.putValue key bytes
+                do! kvstore.putValue (PutValueReq.create key bytes)
             | _ ->
                 printfn "Try %s <key> <value>" ctx.command
             return KeepContext
         }
+
         let runDelete (ctx: CommandRunContext) = task {
             match ctx.parameters with
             | [key] ->
-                do! kvstore.deleteValue key
+                do! kvstore.deleteValue (DeleteValueReq.create key)
             | _ ->
                 printfn "Try %s <key>" ctx.command
             return KeepContext

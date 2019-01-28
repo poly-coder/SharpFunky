@@ -10,7 +10,6 @@
     <None Include="appsettings.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <Compile Include="Common.fs" />
     <Compile Include="KVStore.fs" />
     <Compile Include="Events.fs" />
     <Compile Include="Program.fs" />

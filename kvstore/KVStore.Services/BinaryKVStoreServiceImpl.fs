@@ -12,8 +12,11 @@ type BinaryKVStoreServiceImpl(kvstore: IKVStoreService<string, byte[]>) =
     override this.GetValue(request, context) = task {
         let! success, valueOpt = task {
             try
-                let! valueOpt = kvstore.getValue request.Key
-                return true, valueOpt
+                let! response = kvstore.getValue {
+                    key = request.Key
+                    cancellationToken = context.CancellationToken
+                }
+                return true, response.value
             with
             | _ ->
                 return false, None
@@ -35,7 +38,11 @@ type BinaryKVStoreServiceImpl(kvstore: IKVStoreService<string, byte[]>) =
     override this.PutValue(request, context) = task {
         let! success = task {
             try
-                do! kvstore.putValue request.Key (request.Value.ToByteArray())
+                do! kvstore.putValue {
+                    key = request.Key
+                    value = (request.Value.ToByteArray())
+                    cancellationToken = context.CancellationToken
+                }
                 return true
             with
             | _ ->
@@ -50,7 +57,10 @@ type BinaryKVStoreServiceImpl(kvstore: IKVStoreService<string, byte[]>) =
     override this.RemoveValue(request, context) = task {
         let! success = task {
             try
-                do! kvstore.deleteValue request.Key
+                do! kvstore.deleteValue {
+                    key = request.Key
+                    cancellationToken = context.CancellationToken
+                }
                 return true
             with
             | _ ->

@@ -50,6 +50,13 @@ message ReadRequest {
   string streamId = 1;
   uint64 fromSequence = 2;
   int32 limit = 3;
+  bool readOnlyMetadata = 4;
+  repeated FilterPair filter = 5;
+}
+
+message FilterPair {
+  string key = 1;
+  string filter = 2;
 }
 
 message ReadResponse {

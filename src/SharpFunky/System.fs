@@ -20,7 +20,15 @@ module String =
     let isNotNullOrWS = isNullOrWS >> not
 
     let empty = String.Empty
+    let isEmpty s = String.IsNullOrEmpty s
+    let isWhiteSpace s = String.IsNullOrWhiteSpace s
+    let nonEmpty s = if isEmpty s then None else Some s
+    let nonWhiteSpace s = if isWhiteSpace s then None else Some s
+
     let startsWith prefix (s: string) = s.StartsWith(prefix)
+    let endsWith prefix (s: string) = s.EndsWith(prefix)
+    let contains prefix (s: string) = s.Contains(prefix)
+
     let substring startIndex length (s: string) = s.Substring(startIndex, length)
     let substringFrom startIndex (s: string) = s.Substring(startIndex)
 
@@ -35,6 +43,19 @@ module String =
     let trimEndWith char (s: string) = s.TrimEnd([| char |])
 
     let indexOf sub (text: string) = text.IndexOf(sub: string)
+    let contentBefore sub text =
+        let pos = indexOf sub text
+        if pos < 0 then None else substring 0 pos text |> Some
+    let contentAfter sub text =
+        let pos = indexOf sub text
+        if pos < 0 then None else substringFrom (pos + String.length sub) text |> Some
+    let contentAround sub text =
+        let pos = indexOf sub text
+        if pos < 0 then None else
+            let before = substring 0 pos text
+            let after = substringFrom (pos + String.length sub) text
+            (before, after) |> Some
+
     let joinWith sep (strList: string seq) = String.Join(sep, strList)
 
     let toBase64 bytes = bytes |> Convert.ToBase64String
@@ -182,6 +203,62 @@ module Int64 =
     System.Int64.TryParse(str, NumberStyles.Integer, String.invariantCulture) |> Option.ofTryOp
   let optLens = OptLens.parser "" tryParse toString
 
+module SByte =
+  let minValue = System.SByte.MinValue
+  let maxValue = System.SByte.MaxValue
+  let toString (b: sbyte) = b.ToString()
+  let parseWith styles provider str =
+    System.SByte.Parse(str, styles, provider)
+  let tryParseWith styles provider str =
+    System.SByte.TryParse(str, styles, provider) |> Option.ofTryOp
+  let parse str =
+    System.SByte.Parse(str, String.invariantCulture)
+  let tryParse str =
+    System.SByte.TryParse(str, NumberStyles.Integer, String.invariantCulture) |> Option.ofTryOp
+  let optLens = OptLens.parser "" tryParse toString
+
+module UInt16 =
+  let minValue = System.UInt16.MinValue
+  let maxValue = System.UInt16.MaxValue
+  let toString (b: uint16) = b.ToString()
+  let parseWith styles provider str =
+    System.UInt16.Parse(str, styles, provider)
+  let tryParseWith styles provider str =
+    System.UInt16.TryParse(str, styles, provider) |> Option.ofTryOp
+  let parse str =
+    System.UInt16.Parse(str, String.invariantCulture)
+  let tryParse str =
+    System.UInt16.TryParse(str, NumberStyles.Integer, String.invariantCulture) |> Option.ofTryOp
+  let optLens = OptLens.parser "" tryParse toString
+
+module UInt32 =
+  let minValue = System.UInt32.MinValue
+  let maxValue = System.UInt32.MaxValue
+  let toString (b: uint32) = b.ToString()
+  let parseWith styles provider str =
+    System.UInt32.Parse(str, styles, provider)
+  let tryParseWith styles provider str =
+    System.UInt32.TryParse(str, styles, provider) |> Option.ofTryOp
+  let parse str =
+    System.UInt32.Parse(str, String.invariantCulture)
+  let tryParse str =
+    System.UInt32.TryParse(str, NumberStyles.Integer, String.invariantCulture) |> Option.ofTryOp
+  let optLens = OptLens.parser "" tryParse toString
+
+module UInt64 =
+  let minValue = System.UInt64.MinValue
+  let maxValue = System.UInt64.MaxValue
+  let toString (b: uint64) = b.ToString()
+  let parseWith styles provider str =
+    System.UInt64.Parse(str, styles, provider)
+  let tryParseWith styles provider str =
+    System.UInt64.TryParse(str, styles, provider) |> Option.ofTryOp
+  let parse str =
+    System.UInt64.Parse(str, String.invariantCulture)
+  let tryParse str =
+    System.UInt64.TryParse(str, NumberStyles.Integer, String.invariantCulture) |> Option.ofTryOp
+  let optLens = OptLens.parser "" tryParse toString
+
 
 module Single =
   let minValue = System.Single.MinValue
@@ -245,6 +322,20 @@ module Disposable =
         createInstance dispose
 
     let noop = createInstance ignore
+
+module Exception =
+    open System.Reflection
+
+    let rec getInnerExceptions<'e when 'e :> exn> (exn: exn) =
+        match exn with
+        | :? 'e as exn ->
+            seq { yield exn }
+        | :? AggregateException as exn ->
+            exn.InnerExceptions
+            |> Seq.bind getInnerExceptions<'e>
+        | exn ->
+            getInnerExceptions<'e> exn.InnerException
+
 
 module ResX =
     open System.Reflection

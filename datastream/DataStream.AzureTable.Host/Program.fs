@@ -4,6 +4,7 @@ open DataStream.Protocols.BinaryDataStream
 open Grpc.Core
 open DataStream.Azure.Storage
 open DataStream.Services
+open System.Diagnostics
 
 type ServerConfig() =
     member val Host = "localhost" with get, set
@@ -31,9 +32,14 @@ let main argv =
         |> BinaryDataStreamServiceImpl
         |> BinaryDataStreamService.BindService
         |> server.Services.Add
-    do printfn "Connecting ..."
+    do printfn "Starting ..."
+    let watch = Stopwatch.StartNew()
     do server.Start()
-    do printfn "Connected!"
+    do watch.Stop()
+    do printfn "Listening! %dms" watch.ElapsedMilliseconds
+    do printfn "Host %s:%d" serverConfig.Host serverConfig.Port
+    do printfn "Conn %s" storeOptions.StorageConnectionString
+    do printfn "Table %s" storeOptions.TableName
     do printfn "Press enter to stop server..."
     do Console.ReadLine() |> ignore
     do server.ShutdownAsync().GetAwaiter().GetResult()

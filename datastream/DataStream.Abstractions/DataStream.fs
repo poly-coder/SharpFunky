@@ -115,6 +115,8 @@ type ReadReq<'seq> = {
     streamId: string
     fromSequence: 'seq
     limit: int
+    readOnlyMetadata: bool
+    filter: (string * string) list
     cancellationToken: CancellationToken
 }
 
@@ -123,6 +125,8 @@ module ReadReq =
         streamId = ""
         fromSequence = fromSequence
         limit = 100
+        readOnlyMetadata = false
+        filter = []
         cancellationToken = CancellationToken.None
     }
 
@@ -137,6 +141,14 @@ module ReadReq =
     let setLimit v req: ReadReq<_> = { req with limit = v }
     let limit<'seq> : Lens<ReadReq<'seq>, _> =
         Lens.cons' (fun r -> r.limit) setLimit
+
+    let setReadOnlyMetadata v req: ReadReq<_> = { req with readOnlyMetadata = v }
+    let readOnlyMetadata<'seq> : Lens<ReadReq<'seq>, _> =
+        Lens.cons' (fun r -> r.readOnlyMetadata) setReadOnlyMetadata
+
+    let setFilter v req: ReadReq<_> = { req with filter = v }
+    let filter<'seq> : Lens<ReadReq<'seq>, _> =
+        Lens.cons' (fun r -> r.filter) setFilter
 
     let setCancellationToken v req: ReadReq<_> = { req with cancellationToken = v }
     let cancellationToken<'seq> : Lens<ReadReq<'seq>, _> =
@@ -157,70 +169,8 @@ type IDataStreamService<'seq, 'data, 'meta> =
 
     abstract read: ReadReq<'seq> -> Async<ReadDataStreamRes<'seq, 'data, 'meta>>
 
-type DataStreamCommand<'seq, 'data, 'meta> =
-    | DoGetStatus of GetStatusReq * Sink<Result<DataStreamStatus<'meta>, exn>>
-
-    | DoSaveStatus of SaveStatusReq<'meta> * Sink<Result<DataStreamStatus<'meta>, exn>>
-
-    | DoAppend of AppendReq<'seq, 'data, 'meta> * Sink<Result<DataStreamStatus<'meta>, exn>>
-
-    | DoRead of ReadReq<'seq> * Sink<Result<ReadDataStreamRes<'seq, 'data, 'meta>, exn>>
-
-type DataStreamProcessor<'seq, 'data, 'meta> = Sink<DataStreamCommand<'seq, 'data, 'meta>>
-
-
 [<AutoOpen>]
 module DataStreamExtensions =
-    open System.Threading.Tasks
-
-    let serviceFromProcessor (processor: DataStreamProcessor<'seq, 'data, 'meta>) =
-        let execute fromSink = async {
-            let tcs = TaskCompletionSource()
-            let sink = function
-                | Ok v -> tcs.TrySetResult v |> ignore
-                | Error e -> tcs.TrySetException(e: exn) |> ignore
-            do processor <| fromSink sink
-            return! tcs.Task |> Async.AwaitTask
-        }
-
-        { new IDataStreamService<_, _, _> with
-            member this.getStatus request =
-                execute (fun sink -> DoGetStatus(request, sink))
-
-            member this.saveStatus request =
-                execute (fun sink -> DoSaveStatus(request, sink))
-
-            member this.append request =
-                execute (fun sink -> DoAppend(request, sink))
-
-            member this.read request =
-                execute (fun sink -> DoRead(request, sink))
-        }
-
-    let processorFromService (service: IDataStreamService<'seq, 'data, 'meta>): DataStreamProcessor<'seq, 'data, 'meta> =
-         let execute sink asyncFn =
-             async {
-                 try
-                     let! value = asyncFn()
-                     sink <| Ok value
-                 with exn ->
-                     sink <| Error exn
-             }
-             |> Async.Start
-
-         function
-         | DoGetStatus(request, sink) ->
-             execute sink <| fun () -> service.getStatus request
-
-         | DoSaveStatus(request, sink) ->
-             execute sink <| fun () -> service.saveStatus request
-
-         | DoAppend(request, sink) ->
-             execute sink <| fun () -> service.append request
-
-         | DoRead(request, sink) ->
-             execute sink <| fun () -> service.read request
-
     let convertedService
          (sequenceConverter: Converter<'seq, 'Seq>)
          (dataConverter: Converter<'data, 'Data>)

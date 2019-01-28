@@ -65,14 +65,12 @@ let runCommandRepl services rootRun =
                         let next = { current with run = run' }
                         return! loop (next :: stack')
                     | UnknownCommand helpMessage ->
-                        match command with
-                        | "exit" | "x" ->
+                        if command = "q" || command = "quit" then
+                            return()
+                        elif command = "x" || command = "exit" then
                             return! loop stack'
-                        | "quit" | "q" ->
-                            return! loop []
-                        | _ ->
-                            printfn "Unknown command: %s" helpMessage
-                        return! loop stack
+                        else
+                            return! loop stack
                 with exn ->
                     printfn "Error executing command:\n%O" exn
                     return! loop stack
@@ -91,3 +89,51 @@ let subCommands commandMap =
             let keys = commandMap |> Map.toSeq |> Seq.map fst |> String.joinWith ", "
             return UnknownCommand (sprintf "try the following commands: %s" keys)
     }
+
+
+let (|OneParameter|_|) parameters =
+    match parameters with
+    | [value] -> Some value
+    | _ -> None
+
+let (|OneParsedParameter|_|) tryParse parameters =
+    match parameters with
+    | [value] -> tryParse value
+    | _ -> None
+
+let (|OneOptionalParameter|_|) defaultValue parameters =
+    match parameters with
+    | [] -> Some defaultValue
+    | [value] -> Some value
+    | _ -> None
+
+let (|OneParsedOptionalParameter|_|) defaultValue tryParse parameters =
+    match parameters with
+    | [] -> Some defaultValue
+    | [value] -> tryParse value
+    | _ -> None
+
+let (|MapParameters|_|) parameters =
+    let paramMap =
+        parameters
+        |> Seq.bindOpt (String.contentAround "=")
+        |> Map.ofSeq
+    let content =
+        parameters
+        |> Seq.filter (fun p -> p.Contains("=") |> not)
+        |> Seq.toList
+    Some (paramMap, content)
+
+let (|MapAndBytesParameters|_|) parameters =
+    match parameters with
+    | MapParameters(map, content) ->
+        match content with
+        | [c] ->
+            let bytes =
+                if c.StartsWith "base64:" then
+                    c.Substring(7) |> String.fromBase64
+                else
+                    c |> String.toUtf8
+            Some (map, bytes)
+        | _ -> None
+    | _ -> None

@@ -148,6 +148,8 @@ type BinaryDataStreamServiceImpl(store: IDataStreamService<uint64, byte[], Map<s
                 ReadReq.empty request.FromSequence
                 |> ReadReq.setStreamId request.StreamId
                 |> ReadReq.setLimit request.Limit
+                |> ReadReq.setReadOnlyMetadata request.ReadOnlyMetadata
+                |> ReadReq.setFilter (request.Filter |> Seq.map (fun p -> p.Key, p.Filter) |> Seq.toList)
                 |> ReadReq.setCancellationToken context.CancellationToken
             let! response = store.read request'
             return readResponse request.StreamId response.nextSequence response.reachedEnd response.items

@@ -18,23 +18,18 @@ module Account =
     let tableClient (account: CloudStorageAccount) = account.CreateCloudTableClient()
 
 
-let rec getStorageExceptions (exn: exn) =
-    match exn with
-    | :? StorageException as exn -> seq { yield exn }
-    | :? AggregateException as exn ->
-        seq {
-            for child in exn.InnerExceptions do
-                yield! getStorageExceptions child
-        }
-    | _ -> Seq.empty
-
-let getErrorCodes exn =
-    getStorageExceptions exn
-    |> Seq.map (fun e -> e.RequestInformation.ErrorCode)
+let getStatusAndErrorCodes exn =
+    Exception.getInnerExceptions<StorageException> exn
+    |> Seq.filter (fun e -> isNull e.RequestInformation |> not)
+    |> Seq.map (fun e -> e.RequestInformation.HttpStatusCode, e.RequestInformation.ErrorCode)
 
 let isErrorCode errorCode exn =
-    getErrorCodes exn
-    |> Seq.exists ((=) errorCode)
+    getStatusAndErrorCodes exn
+    |> Seq.exists (fun (status, code) -> code = errorCode)
+
+let isStatusOrErrorCode statusCode errorCode exn =
+    getStatusAndErrorCodes exn
+    |> Seq.exists (fun (status, code) -> status = statusCode || code = errorCode)
 
 let fromSegmented
     (initToken: 'continuationToken)
