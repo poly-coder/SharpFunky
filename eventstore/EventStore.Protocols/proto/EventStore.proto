@@ -1,0 +1,64 @@
+﻿syntax = "proto3";
+
+option csharp_namespace = "EventStore.Protocols";
+
+package EventStore.Protocols;
+
+/* Models */
+
+enum PropertyStatus {
+  CREATED = 0;
+  OPEN = 1;
+  FROZEN = 2;
+  DELETING = 3;
+}
+
+enum ErrorCode {
+  DUPLICATE_NAME = 1;
+}
+
+message ErrorInfo {
+  ErrorCode code = 1;
+  string message = 2;
+}
+
+message PropertyInfo {
+  string propertyName = 1;
+  PropertyStatus status = 2;
+  string AccessKey1 = 3;
+  string AccessKey2 = 4;
+}
+
+/* EventStoreManager service */
+
+message GetPropertiesRequest {
+  string startAt = 1;
+  string nameFilter = 2;
+  PropertyStatus statusFilter = 3;
+  int32 limit = 4;
+}
+
+message GetPropertiesResponse {
+  repeated PropertyInfo properties = 1;
+  string continueAt = 2;
+  ErrorInfo error = 3;
+}
+
+message CreatePropertyRequest {
+  string propertyName = 1;
+}
+
+message CreatePropertyResponse {
+  PropertyInfo property = 1;
+  ErrorInfo error = 2;
+}
+
+service EventStoreManager {
+  rpc GetProperties(GetPropertiesRequest) returns (GetPropertiesResponse);
+  rpc CreateProperty(CreatePropertyRequest) returns (CreatePropertyResponse);
+}
+
+/* EventStoreService service */
+
+service EventStoreService {
+}

@@ -11,11 +11,6 @@
 
   <ItemGroup>
     <Compile Include="AzureStorage.fs" />
-    <Compile Include="KeyValueStore.AzureTables.fs" />
-    <Compile Include="KeyValueStore.AzureBlobs.fs" />
-    <Compile Include="StatelessEventStream.AzureTables.fs" />
-    <Compile Include="MessageSubscriber.AzureQueues.fs" />
-    <Compile Include="MessagePublisher.AzureQueues.fs" />
   </ItemGroup>
 
   <ItemGroup>
@@ -24,7 +19,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\SharpFunky.Abstractions\SharpFunky.Abstractions.fsproj" />
     <ProjectReference Include="..\SharpFunky\SharpFunky.fsproj" />
   </ItemGroup>
 

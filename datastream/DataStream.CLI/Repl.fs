@@ -127,13 +127,12 @@ let (|MapParameters|_|) parameters =
 let (|MapAndBytesParameters|_|) parameters =
     match parameters with
     | MapParameters(map, content) ->
-        match content with
-        | [c] ->
+        List.tryExactlyOne content
+        |> Option.map (fun c ->
             let bytes =
                 if c.StartsWith "base64:" then
                     c.Substring(7) |> String.fromBase64
                 else
                     c |> String.toUtf8
-            Some (map, bytes)
-        | _ -> None
+            (map, bytes))
     | _ -> None
