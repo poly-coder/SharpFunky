@@ -6,15 +6,20 @@ package EventStore.Protocols;
 
 /* Models */
 
-enum PropertyStatus {
-  CREATED = 0;
-  OPEN = 1;
-  FROZEN = 2;
-  DELETING = 3;
+enum ItemStatus {
+  OPEN = 0;
+  FROZEN = 1;
+  DELETING = 2;
 }
 
 enum ErrorCode {
+  UNKNOWN = 0;
   DUPLICATE_NAME = 1;
+  IS_FROZEN = 2;
+  IS_DELETING = 3;
+  PROPERTY_NOT_FOUND = 4;
+  NAMESPACE_NOT_FOUND = 5;
+  TOPIC_NOT_FOUND = 6;
 }
 
 message ErrorInfo {
@@ -22,19 +27,46 @@ message ErrorInfo {
   string message = 2;
 }
 
-message PropertyInfo {
+message PropertyRef {
   string propertyName = 1;
-  PropertyStatus status = 2;
+}
+
+message NamespaceRef {
+  string propertyName = 1;
+  string namespaceName = 2;
+}
+
+message TopicRef {
+  string propertyName = 1;
+  string namespaceName = 2;
+  string topicName = 3;
+}
+
+message PropertyInfo {
+  PropertyRef reference = 1;
+  ItemStatus status = 2;
   string AccessKey1 = 3;
   string AccessKey2 = 4;
 }
 
+message NamespaceInfo {
+  NamespaceRef reference = 1;
+  ItemStatus status = 2;
+}
+
+message TopicInfo {
+  TopicRef reference = 1;
+  ItemStatus status = 2;
+}
+
 /* EventStoreManager service */
+
+/* Properties */
 
 message GetPropertiesRequest {
   string startAt = 1;
-  string nameFilter = 2;
-  PropertyStatus statusFilter = 3;
+  string propertyNameFilter = 2;
+  ItemStatus statusFilter = 3;
   int32 limit = 4;
 }
 
@@ -45,7 +77,8 @@ message GetPropertiesResponse {
 }
 
 message CreatePropertyRequest {
-  string propertyName = 1;
+  PropertyRef propertyRef = 1;
+  bool frozen = 2;
 }
 
 message CreatePropertyResponse {
@@ -53,12 +86,205 @@ message CreatePropertyResponse {
   ErrorInfo error = 2;
 }
 
+message FreezePropertyRequest {
+  PropertyRef propertyRef = 1;
+}
+
+message FreezePropertyResponse {
+  ErrorInfo error = 1;
+}
+
+message UnfreezePropertyRequest {
+  PropertyRef propertyRef = 1;
+}
+
+message UnfreezePropertyResponse {
+  ErrorInfo error = 1;
+}
+
+message DeletePropertyRequest {
+  PropertyRef propertyRef = 1;
+}
+
+message DeletePropertyResponse {
+  ErrorInfo error = 1;
+}
+
+message RegenerateAccessKey1Request {
+  PropertyRef propertyRef = 1;
+}
+
+message RegenerateAccessKey1Response {
+  string accessKey1 = 1;
+  ErrorInfo error = 2;
+}
+
+message RegenerateAccessKey2Request {
+  PropertyRef propertyRef = 1;
+}
+
+message RegenerateAccessKey2Response {
+  string accessKey2 = 1;
+  ErrorInfo error = 2;
+}
+
+/* Namespaces */
+
+message GetNamespacesRequest {
+  string startAt = 1;
+  PropertyRef propertyRef = 2;
+  string namespaceNameFilter = 3;
+  ItemStatus statusFilter = 4;
+  int32 limit = 5;
+}
+
+message GetNamespacesResponse {
+  repeated NamespaceInfo namespace = 1;
+  string continueAt = 2;
+  ErrorInfo error = 3;
+}
+
+message CreateNamespaceRequest {
+  NamespaceRef namespaceRef = 1;
+  bool frozen = 2;
+}
+
+message CreateNamespaceResponse {
+  NamespaceInfo namespace = 1;
+  ErrorInfo error = 2;
+}
+
+message FreezeNamespaceRequest {
+  NamespaceRef namespaceRef = 1;
+}
+
+message FreezeNamespaceResponse {
+  ErrorInfo error = 1;
+}
+
+message UnfreezeNamespaceRequest {
+  NamespaceRef namespaceRef = 1;
+}
+
+message UnfreezeNamespaceResponse {
+  ErrorInfo error = 1;
+}
+
+message DeleteNamespaceRequest {
+  NamespaceRef namespaceRef = 1;
+}
+
+message DeleteNamespaceResponse {
+  ErrorInfo error = 1;
+}
+
+/* Topics */
+
+message GetTopicsRequest {
+  string startAt = 1;
+  NamespaceRef namespaceRef = 2;
+  string topicNameFilter = 3;
+  ItemStatus statusFilter = 4;
+  int32 limit = 5;
+}
+
+message GetTopicsResponse {
+  repeated TopicInfo topic = 1;
+  string continueAt = 2;
+  ErrorInfo error = 3;
+}
+
+message CreateTopicRequest {
+  TopicRef topicRef = 1;
+  bool frozen = 2;
+}
+
+message CreateTopicResponse {
+  TopicInfo topic = 1;
+  ErrorInfo error = 2;
+}
+
+message FreezeTopicRequest {
+  TopicRef topicRef = 1;
+}
+
+message FreezeTopicResponse {
+  ErrorInfo error = 1;
+}
+
+message UnfreezeTopicRequest {
+  TopicRef topicRef = 1;
+}
+
+message UnfreezeTopicResponse {
+  ErrorInfo error = 1;
+}
+
+message DeleteTopicRequest {
+  TopicRef topicRef = 1;
+}
+
+message DeleteTopicResponse {
+  ErrorInfo error = 1;
+}
+
+/* Service */
+
 service EventStoreManager {
   rpc GetProperties(GetPropertiesRequest) returns (GetPropertiesResponse);
   rpc CreateProperty(CreatePropertyRequest) returns (CreatePropertyResponse);
+  rpc FreezeProperty(FreezePropertyRequest) returns (FreezePropertyResponse);
+  rpc UnfreezeProperty(UnfreezePropertyRequest) returns (UnfreezePropertyResponse);
+  rpc DeleteProperty(DeletePropertyRequest) returns (DeletePropertyResponse);
+  rpc RegenerateAccessKey1(RegenerateAccessKey1Request) returns (RegenerateAccessKey1Response);
+  rpc RegenerateAccessKey2(RegenerateAccessKey2Request) returns (RegenerateAccessKey2Response);
+
+  rpc GetNamespaces(GetNamespacesRequest) returns (GetNamespacesResponse);
+  rpc CreateNamespace(CreateNamespaceRequest) returns (CreateNamespaceResponse);
+  rpc FreezeNamespace(FreezeNamespaceRequest) returns (FreezeNamespaceResponse);
+  rpc UnfreezeNamespace(UnfreezeNamespaceRequest) returns (UnfreezeNamespaceResponse);
+  rpc DeleteNamespace(DeleteNamespaceRequest) returns (DeleteNamespaceResponse);
+
+  rpc GetTopics(GetTopicsRequest) returns (GetTopicsResponse);
+  rpc CreateTopic(CreateTopicRequest) returns (CreateTopicResponse);
+  rpc FreezeTopic(FreezeTopicRequest) returns (FreezeTopicResponse);
+  rpc UnfreezeTopic(UnfreezeTopicRequest) returns (UnfreezeTopicResponse);
+  rpc DeleteTopic(DeleteTopicRequest) returns (DeleteTopicResponse);
 }
 
 /* EventStoreService service */
 
+message EventData {
+  bytes content = 1;
+  map<string, string> metadata = 2;
+  uint64 topicSequence = 3;
+  uint64 timestamp = 4;
+  string eventType = 5;
+  string aggregateType = 6;
+  string aggregateId = 7;
+  uint32 aggregateVersion = 8;
+}
+
+message GetTopicStatusRequest {
+  TopicRef topicRef = 1;
+}
+
+message GetTopicStatusResponse {
+  ErrorInfo error = 1;
+}
+
+message AppendEventsRequest {
+  TopicRef topicRef = 1;
+  repeated EventData events = 2;
+}
+
+message AppendEventsResponse {
+  ErrorInfo error = 1;
+}
+
+/* Service */
+
 service EventStoreService {
+  rpc GetTopicStatus (GetTopicStatusRequest) returns (GetTopicStatusResponse);
+  rpc AppendEvents (AppendEventsRequest) returns (AppendEventsResponse);
 }
