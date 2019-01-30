@@ -2,13 +2,27 @@ namespace EventStore.GrainInterfaces
 
 open System.Threading.Tasks
 open Orleans
+open System
 open EventStore.Abstractions
 
-type IEventStorePropertiesManagerGrain =
+//type PropertyItem = {
+//    propertyName: string
+//    propertyId: Guid
+//}
+
+type IPropertyManagerGrain =
+    inherit IGrainWithGuidKey
+
+    abstract GetStatus: unit -> Task<PropertyInfo>
+
+type IPropertiesManagerGrain =
     inherit IGrainWithStringKey
 
-    abstract getProperties: request: GetPropertiesReq -> Task<GetPropertiesRes>
-    abstract createProperty: request: CreatePropertyReq -> Task<CreatePropertyRes>
+    abstract GetPropertyNames: unit -> Task<string list>
+
+    abstract CreateProperty: propertyName: string -> Task<IPropertyManagerGrain>
+    
+    abstract GetProperty: propertyName: string -> Task<IPropertyManagerGrain option>
 
 
 //type IEventStoreManagerGrain =

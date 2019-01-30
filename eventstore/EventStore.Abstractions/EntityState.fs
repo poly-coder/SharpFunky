@@ -1,44 +1,67 @@
-﻿module EventStore.EntityState
+﻿namespace EventStore.Abstractions
 
 open EventStore.Abstractions
 open SharpFunky
 
-type SnapshottedEntityStateDefinition<'state, 'message> = {
-    initState: unit -> 'state
-    applyMessage: 'state -> 'message -> 'state
-    snapshotVersion: string
-    snapshotSerializer: Converter<'state, Snapshot>
-    messageSerializer: Converter<'message, Message>
-}
+module EntityState =
+    type IEntityStateDefinition<'state, 'message> =
+        abstract newState: unit -> 'state
+        abstract applyMessage: 'state -> 'message -> 'state
+        abstract deserializeMessage: Message -> 'message list
+        abstract serializeMessage: 'message -> Message
 
-let readSnapshotted (snapshotStore: ISnapshotStore) (messageStore: IMessageStore) stateDef = async {
-    let! snapshot = snapshotStore.getSnapshot stateDef.snapshotVersion
-    let initState, initSequence =
-        match snapshot with
-        | Some snapshot ->
-            let state = snapshot |> Converter.backward stateDef.snapshotSerializer
-            let nextSequence = snapshot.sequence + 1UL
-            state, nextSequence
-        | None ->
-            stateDef.initState(), 0UL
-    
-    let rec buildState state nextSequence = async {
-        let! segment = messageStore.readMessages nextSequence
-        let state' =
-            (state, segment.messages)
-            ||> Seq.fold (fun st msg -> 
-                let message = msg |> Converter.backward stateDef.messageSerializer
-                stateDef.applyMessage st message)
+    let buildFrom
+        initSequence
+        initState
+        (stateDef: #IEntityStateDefinition<_, _>)
+        (messageStore: #IMessageStore) =
+        let rec buildState state nextSequence = async {
+            let! segment = messageStore.readMessages nextSequence
+            let state' =
+                segment.messages
+                |> Seq.bind stateDef.deserializeMessage
+                |> Seq.fold stateDef.applyMessage state
 
-        match segment.nextSequence with
-        | Some value ->
-            return! buildState state' value
-        | None ->
-            return state'
+            match segment.nextSequence with
+            | Some value ->
+                return! buildState state' value
+            | None ->
+                return state'
+        }
+        buildState initState initSequence
+
+    let readEntity
+        (stateDef: #IEntityStateDefinition<'state, 'message>)
+        (messageStore: #IMessageStore) = async {
+        let initState = stateDef.newState()
+        let initSequence = 0UL
+        return! buildFrom initSequence initState stateDef messageStore
     }
 
-    let! state = buildState initState initSequence
+module SnapshottedEntityState =
+    type ISnapshottedEntityStateDefinition<'state, 'message> =
+        inherit EntityState.IEntityStateDefinition<'state, 'message>
 
-    return state
-}
+        abstract deserializeSnapshot: Snapshot -> 'state option
+        abstract serializeSnapshot: 'state -> Snapshot
 
+    let readEntity
+        (stateDef: #ISnapshottedEntityStateDefinition<_, _>)
+        (snapshotStore: #ISnapshotStore)
+        (messageStore: #IMessageStore) = async {
+        let! snapshot = snapshotStore.getSnapshot()
+
+        let initState, initSequence =
+            snapshot
+            |> Option.bind (fun snap ->
+                stateDef.deserializeSnapshot snap
+                |> Option.map (fun st -> st, snap.sequence + 1UL))
+            |> Option.matches 
+                (fun a -> a)
+                (fun () ->
+                    let initState' = stateDef.newState()
+                    initState', 0UL
+                )
+
+        return! EntityState.buildFrom initSequence initState stateDef messageStore
+    }

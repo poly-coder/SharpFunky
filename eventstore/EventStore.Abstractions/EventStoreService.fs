@@ -36,7 +36,7 @@ type AppendEventsRes =
     | AppendEventsConnected
     | AppendEventsDisconnected
     | AppendEventsQuotaAssigned of quota: int
-    | AppendEventsSuccess of PersistedEventInfo list
+    | AppendEventsSuccess of eventInfos: PersistedEventInfo list
     | AppendEventsError of error: EventStoreErrorInfo
 
 type ReadEventsReq =

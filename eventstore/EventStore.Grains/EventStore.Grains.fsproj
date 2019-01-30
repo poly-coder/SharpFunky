@@ -5,13 +5,14 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="EventStorePropertiesManagerGrain.fs" />
+    <Compile Include="PropertiesManagerGrain.fs" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="2.2.0" />
     <PackageReference Include="Microsoft.Orleans.Core.Abstractions" Version="2.2.0" />
     <PackageReference Include="Microsoft.Orleans.OrleansCodeGenerator" Version="2.2.3" />
+    <PackageReference Include="MsgPack.Cli" Version="1.0.0" />
     <PackageReference Include="TaskBuilder.fs" Version="2.1.0" />
   </ItemGroup>
 
