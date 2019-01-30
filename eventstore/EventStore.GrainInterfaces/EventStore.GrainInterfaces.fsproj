@@ -5,15 +5,17 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="SnapshotStore.fs" />
-    <Compile Include="MessageStore.fs" />
-    <Compile Include="EntityState.fs" />
-    <Compile Include="EventStoreManager.fs" />
-    <Compile Include="EventStoreService.fs" />
+    <Compile Include="IEventStorePropertiesManagerGrain.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Orleans.Core.Abstractions" Version="2.2.0" />
+    <PackageReference Include="Microsoft.Orleans.OrleansCodeGenerator" Version="2.2.3" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\SharpFunky\SharpFunky.fsproj" />
+    <ProjectReference Include="..\EventStore.Abstractions\EventStore.Abstractions.fsproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -20,6 +20,7 @@ enum ErrorCode {
   PROPERTY_NOT_FOUND = 4;
   NAMESPACE_NOT_FOUND = 5;
   TOPIC_NOT_FOUND = 6;
+  DUPLICATE_EVENT = 7;
 }
 
 message ErrorInfo {
@@ -260,9 +261,16 @@ message EventData {
   uint64 topicSequence = 3;
   uint64 timestamp = 4;
   string eventType = 5;
-  string aggregateType = 6;
-  string aggregateId = 7;
-  uint32 aggregateVersion = 8;
+  string eventId = 6;
+  string aggregateType = 7;
+  string aggregateId = 8;
+  uint32 aggregateVersion = 9;
+}
+
+message PersistedEventInfo {
+  uint64 topicSequence = 1;
+  uint64 timestamp = 2;
+  string eventId = 3;
 }
 
 message GetTopicStatusRequest {
@@ -279,7 +287,19 @@ message AppendEventsRequest {
 }
 
 message AppendEventsResponse {
-  ErrorInfo error = 1;
+  repeated PersistedEventInfo eventInfo = 1;
+  ErrorInfo error = 2;
+}
+
+message StartAppendingEventsRequest {
+  TopicRef topicRef = 1;
+  repeated EventData events = 2;
+  bool respondOnSuccess = 3;
+}
+
+message StartAppendingEventsResponse {
+  repeated PersistedEventInfo eventInfo = 1;
+  ErrorInfo error = 2;
 }
 
 /* Service */
@@ -287,4 +307,5 @@ message AppendEventsResponse {
 service EventStoreService {
   rpc GetTopicStatus (GetTopicStatusRequest) returns (GetTopicStatusResponse);
   rpc AppendEvents (AppendEventsRequest) returns (AppendEventsResponse);
+  rpc StartAppendingEvents (stream StartAppendingEventsRequest) returns (stream StartAppendingEventsResponse);
 }
