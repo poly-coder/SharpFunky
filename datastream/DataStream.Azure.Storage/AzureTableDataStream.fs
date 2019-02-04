@@ -19,8 +19,6 @@ type AzureTableDataStreamOptions() =
 
 type AzureTableDataStream(options: AzureTableDataStreamOptions) =
 
-    let account = Account.parse options.StorageConnectionString
-    do NameValidator.ValidateTableName(options.TableName)
 
     [<Literal>]
     let StatusRowKey = "A_STATUS"
@@ -31,6 +29,7 @@ type AzureTableDataStream(options: AzureTableDataStreamOptions) =
     [<Literal>]
     let ContentPrefix = "Data_"
 
+    do NameValidator.ValidateTableName(options.TableName)
     let account = Account.parse options.StorageConnectionString
     let client = account.CreateCloudTableClient()
     let table = client.GetTableReference(options.TableName)

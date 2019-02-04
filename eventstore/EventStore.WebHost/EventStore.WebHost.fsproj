@@ -12,6 +12,17 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="2.2.0" />
+    <PackageReference Include="Microsoft.Orleans.Client" Version="2.2.0" />
+    <PackageReference Include="Microsoft.Orleans.OrleansCodeGenerator" Version="2.2.0" />
+    <PackageReference Include="TaskBuilder.fs" Version="2.1.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\SharpFunky\SharpFunky.fsproj" />
+    <ProjectReference Include="..\EventStore.Abstractions\EventStore.Abstractions.fsproj" />
+    <ProjectReference Include="..\EventStore.Clients\EventStore.Clients.fsproj" />
+    <ProjectReference Include="..\EventStore.GrainInterfaces\EventStore.GrainInterfaces.fsproj" />
   </ItemGroup>
 
   <ItemGroup>

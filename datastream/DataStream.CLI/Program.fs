@@ -48,7 +48,7 @@ let runConn (ctx: CommandRunContext) = task {
                         printfn "previous %A" status
 
                         let request =
-                            SaveStatusReq.empty metadata
+                            SaveStatusReq.create metadata
                             |> SaveStatusReq.setStreamId streamId
                             |> SaveStatusReq.setEtag status.etag
 
@@ -70,7 +70,7 @@ let runConn (ctx: CommandRunContext) = task {
                         printfn "previous %A" status
 
                         let request =
-                            SaveStatusReq.empty metadata
+                            SaveStatusReq.create metadata
                             |> SaveStatusReq.setStreamId streamId
                             |> SaveStatusReq.setEtag status.etag
 

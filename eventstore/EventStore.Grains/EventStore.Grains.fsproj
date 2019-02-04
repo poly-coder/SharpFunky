@@ -5,7 +5,9 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="EntityStateDefinition.fs" />
     <Compile Include="SnapshottedEntityStateDefinition.fs" />
+    <Compile Include="MessageStoreGrain.fs" />
     <Compile Include="PropertiesManagerGrain.fs" />
     <Compile Include="PropertyManagerGrain.fs" />
   </ItemGroup>
@@ -13,12 +15,13 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="2.2.0" />
     <PackageReference Include="Microsoft.Orleans.Core.Abstractions" Version="2.2.0" />
-    <PackageReference Include="Microsoft.Orleans.OrleansCodeGenerator" Version="2.2.3" />
+    <PackageReference Include="Microsoft.Orleans.OrleansCodeGenerator" Version="2.2.0" />
     <PackageReference Include="MsgPack.Cli" Version="1.0.1" />
     <PackageReference Include="TaskBuilder.fs" Version="2.1.0" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\datastream\DataStream.Abstractions\DataStream.Abstractions.fsproj" />
     <ProjectReference Include="..\..\src\SharpFunky\SharpFunky.fsproj" />
     <ProjectReference Include="..\EventStore.Abstractions\EventStore.Abstractions.fsproj" />
     <ProjectReference Include="..\EventStore.GrainInterfaces\EventStore.GrainInterfaces.fsproj" />

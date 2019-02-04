@@ -114,7 +114,7 @@ type BinaryDataStreamServiceImpl(store: IDataStreamService<uint64, byte[], Map<s
     override this.SaveStatus(request, context) = task {
         try
             let request' =
-                SaveStatusReq.empty (mapFromProtobuf request.Metadata)
+                SaveStatusReq.create (mapFromProtobuf request.Metadata)
                 |> SaveStatusReq.setStreamId request.StreamId
                 |> SaveStatusReq.setEtag request.Etag
                 |> SaveStatusReq.setCancellationToken context.CancellationToken
@@ -128,7 +128,7 @@ type BinaryDataStreamServiceImpl(store: IDataStreamService<uint64, byte[], Map<s
     override this.Append(request, context) = task {
         try
             let request' =
-                AppendReq.empty
+                AppendReq.create
                     (mapFromProtobuf request.Metadata)
                     (itemsFromProtobuf request.Items)
                 |> AppendReq.setStreamId request.StreamId
@@ -145,7 +145,7 @@ type BinaryDataStreamServiceImpl(store: IDataStreamService<uint64, byte[], Map<s
     override this.Read(request, context) = task {
         try
             let request' =
-                ReadReq.empty request.FromSequence
+                ReadReq.create request.FromSequence
                 |> ReadReq.setStreamId request.StreamId
                 |> ReadReq.setLimit request.Limit
                 |> ReadReq.setReadOnlyMetadata request.ReadOnlyMetadata

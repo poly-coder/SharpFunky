@@ -13,6 +13,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\datastream\DataStream.Azure.Storage\DataStream.Azure.Storage.fsproj" />
     <ProjectReference Include="..\..\src\SharpFunky\SharpFunky.fsproj" />
     <ProjectReference Include="..\EventStore.Abstractions\EventStore.Abstractions.fsproj" />
     <ProjectReference Include="..\EventStore.GrainInterfaces\EventStore.GrainInterfaces.fsproj" />
@@ -25,11 +26,12 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.CommandLine" Version="2.2.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="2.2.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="2.2.0" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="2.2.0" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="2.2.0" />
     <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="2.2.0" />
     <PackageReference Include="Microsoft.Orleans.Core.Abstractions" Version="2.2.0" />
-    <PackageReference Include="Microsoft.Orleans.OrleansCodeGenerator" Version="2.2.3" />
-    <PackageReference Include="Microsoft.Orleans.Server" Version="2.2.3" />
+    <PackageReference Include="Microsoft.Orleans.OrleansCodeGenerator" Version="2.2.0" />
+    <PackageReference Include="Microsoft.Orleans.Server" Version="2.2.0" />
     <PackageReference Include="TaskBuilder.fs" Version="2.1.0" />
   </ItemGroup>
 

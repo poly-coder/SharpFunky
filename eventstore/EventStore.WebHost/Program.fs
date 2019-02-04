@@ -9,6 +9,7 @@ open Microsoft.AspNetCore
 open Microsoft.AspNetCore.Hosting
 open Microsoft.Extensions.Configuration
 open Microsoft.Extensions.Logging
+open Microsoft.Extensions.DependencyInjection
 
 module Program =
     let exitCode = 0

@@ -43,6 +43,8 @@ module GetStatusReq =
     let setCancellationToken v req = { req with cancellationToken = v }
     let cancellationToken = Lens.cons' (fun r -> r.cancellationToken) setCancellationToken
 
+    let create streamId = empty |> setStreamId streamId
+
 type SaveStatusReq<'meta> = {
     streamId: string
     etag: string
@@ -51,7 +53,7 @@ type SaveStatusReq<'meta> = {
 }
 
 module SaveStatusReq =
-    let empty metadata = {
+    let create metadata = {
         streamId = ""
         etag = ""
         metadata = metadata
@@ -83,7 +85,7 @@ type AppendReq<'seq, 'data, 'meta> = {
 }
 
 module AppendReq =
-    let empty metadata items = {
+    let create metadata items = {
         streamId = ""
         etag = ""
         metadata = metadata
@@ -121,7 +123,7 @@ type ReadReq<'seq> = {
 }
 
 module ReadReq =
-    let empty fromSequence = {
+    let create fromSequence = {
         streamId = ""
         fromSequence = fromSequence
         limit = 100
@@ -205,7 +207,7 @@ module DataStreamExtensions =
 
             member this.saveStatus request = async {
                  let request' =
-                    SaveStatusReq.empty 
+                    SaveStatusReq.create 
                         (Converter.forward metaConverter request.metadata)
                     |> SaveStatusReq.setStreamId request.streamId
                     |> SaveStatusReq.setEtag request.etag
@@ -216,7 +218,7 @@ module DataStreamExtensions =
 
             member this.append request = async {
                  let request' =
-                    AppendReq.empty 
+                    AppendReq.create 
                         (Converter.forward metaConverter request.metadata)
                         (Converter.forward itemsConverter request.items)
                     |> AppendReq.setStreamId request.streamId
@@ -228,7 +230,7 @@ module DataStreamExtensions =
 
             member this.read request = async {
                  let request' =
-                    ReadReq.empty 
+                    ReadReq.create 
                         (Converter.forward sequenceConverter request.fromSequence)
                     |> ReadReq.setStreamId request.streamId
                     |> ReadReq.setLimit request.limit

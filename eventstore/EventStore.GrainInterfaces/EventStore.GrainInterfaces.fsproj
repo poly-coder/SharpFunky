@@ -5,12 +5,14 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="IMessageStoreGrain.fs" />
+    <Compile Include="IPropertyManagerGrain.fs" />
     <Compile Include="IPropertiesManagerGrain.fs" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Orleans.Core.Abstractions" Version="2.2.0" />
-    <PackageReference Include="Microsoft.Orleans.OrleansCodeGenerator" Version="2.2.3" />
+    <PackageReference Include="Microsoft.Orleans.OrleansCodeGenerator" Version="2.2.0" />
   </ItemGroup>
 
   <ItemGroup>
