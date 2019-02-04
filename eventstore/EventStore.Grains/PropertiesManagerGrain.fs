@@ -7,10 +7,18 @@ open EventStore.GrainInterfaces
 open FSharp.Control.Tasks.V2
 open System
 open System.Threading.Tasks
-open EventStore.Abstractions.SnapshottedEntityState
+open EventStore.Abstractions.EntityState
 open MsgPack
-open MsgPack.Serialization
 open System.IO
+open EventStore.Grains
+
+type PropertyManagerError =
+    | PropertyIsAlreadyInitialized
+    | PropertyIsNotInitialized
+    | PropertyIsInitializedDifferently
+    | PropertyNameAlreadyExists
+
+exception PropertyManagerException of PropertyManagerError
 
 type PropertyItemState = {
     propertyId: Guid
@@ -25,136 +33,116 @@ type PropertiesManagerEvent =
     | PropertyCreated of name: string * id: Guid
 
 type PropertiesManagerStateDefinition() =
-    let EventTypePrefix = "com.sharpfunky.eventstore.properties."
-    let eventSubType = String.contentAfter EventTypePrefix
-    let asType t = EventTypePrefix + t
+    inherit EntityStateDefinition<PropertiesManagerState, PropertiesManagerEvent>
+        ("com.sharpfunky.eventstore.properties.")
 
-    interface ISnapshottedEntityStateDefinition<PropertiesManagerState, PropertiesManagerEvent> with
-        member this.newState() = {
-            properties = []
-        }
+    override this.newState() = {
+        properties = []
+    }
 
-        member this.applyMessage state event =
-            match event with
-            | PropertyCreated(name, id) ->
-                let item = { propertyId = id; propertyName = name }
-                let properties = state.properties @ [item]
-                { state with properties = properties }
+    override this.applyMessage state event =
+        match event with
+        | PropertyCreated(name, id) ->
+            let item = { propertyId = id; propertyName = name }
+            let properties = state.properties @ [item]
+            { state with properties = properties }
 
-        member this.deserializeMessage message =
-            maybe {
-                let! eventType = message.metadata |> Map.tryFind "eventType"
-                let! subType = eventSubType eventType
-                match subType with
-                | "created" ->
-                    use mem = new MemoryStream(message.data)
-                    let pk = Unpacker.Create(mem)
-                    let mutable name = ""
-                    let mutable idBytes = Unchecked.defaultof<_>
-                    do pk.ReadString(&name) |> ignore
-                    do pk.ReadBinary(&idBytes) |> ignore
-                    let id = Guid(idBytes)
-                    return [ PropertyCreated(name, id) ]
-                | _ -> return! None
-            } |> Option.defaultValue []
+    override this.deserializeMessage eventType upk =
+        match eventType with
+        | "initialized" ->
+            let mutable name = ""
+            let mutable idBytes = Unchecked.defaultof<_>
+            do upk.ReadString(&name) |> ignore
+            do upk.ReadBinary(&idBytes) |> ignore
+            let id = Guid(idBytes)
+            [ PropertyCreated(name, id) ]
+        | _ -> []
 
-        member this.serializeMessage event =
-            let eventType, data =
-                match event with
-                | PropertyCreated(name, id) ->
-                    use mem = new MemoryStream()
-                    let pk = Packer.Create(mem)
-                    do pk.PackString(name) |> ignore
-                    do pk.PackBinary(id.ToByteArray()) |> ignore
-                    do pk.Flush()
-                    asType "created", mem.ToArray()
-            {
-                data = data
-                metadata = [ "eventType", eventType] |> Map.ofSeq
-                sequence = 0UL
-            }
-
-        member this.deserializeSnapshot snapshot =
-            maybe {
-                let! version = snapshot.metadata |> Map.tryFind "version"
-                match version with
-                | "1" ->
-                    use mem = new MemoryStream(snapshot.data)
-                    let pk = Unpacker.Create(mem)
-                    let mutable len = 0
-                    do pk.ReadInt32(&len) |> ignore
-                    let properties = [
-                        for _ in 0 .. len - 1 ->
-                            let mutable name = ""
-                            let mutable idBytes = Unchecked.defaultof<_>
-                            do pk.ReadString(&name) |> ignore
-                            do pk.ReadBinary(&idBytes) |> ignore
-                            let id = Guid(idBytes)
-                            { propertyId = id
-                              propertyName = name }
-                    ]
-                    return { properties = properties }
-                | _ -> return! None
-            }
-
-        member this.serializeSnapshot state = 
-            let version, data =
-                use mem = new MemoryStream()
-                let pk = Packer.Create(mem)
-                do pk.Pack(List.length state.properties) |> ignore
-                do state.properties
-                    |> List.iter (fun prop ->
-                        do pk.PackString(prop.propertyName) |> ignore
-                        do pk.PackBinary(prop.propertyId.ToByteArray()) |> ignore
-                    )
-
-                do pk.Flush()
-                "1", mem.ToArray()
-            {
-                data = data
-                metadata = [ "version", version ] |> Map.ofSeq
-                sequence = 0UL
-            }
+    override this.serializeMessage event pk =
+        match event with
+        | PropertyCreated(name, id) ->
+            do pk.PackString(name) |> ignore
+            do pk.PackBinary(id.ToByteArray()) |> ignore
+            "created"
 
 type PropertiesManagerConfig = {
-    snapshotStoreLocator: ISnapshotStoreLocator
-    messageStoreLocator: IMessageStoreLocator
+    messageStoreLocator: IMessageStoreLocator<string>
+    maxUnsnapshottedEventsCount: int
+    maxUnsnapshottedEventsTime: TimeSpan
 }
 
 type IPropertiesManagerConfigLocator =
     abstract getConfig: name: string -> Task<PropertiesManagerConfig>
 
-type PropertiesManagerGrain(configLocator: IPropertiesManagerConfigLocator) =
+type PropertiesManagerGrain
+    (
+        configLocator: IPropertiesManagerConfigLocator,
+        grainFactory: IGrainFactory
+    ) =
     inherit Grain()
 
-    let stateDef = PropertiesManagerStateDefinition() :> ISnapshottedEntityStateDefinition<PropertiesManagerState, PropertiesManagerEvent>
+    let stateDef = PropertiesManagerStateDefinition() :> IEntityStateDefinition<PropertiesManagerState, PropertiesManagerEvent>
     let mutable state = Unchecked.defaultof<PropertiesManagerState>
-    let mutable snapshotStore = Unchecked.defaultof<_>
     let mutable messageStore = Unchecked.defaultof<_>
-    let mutable unsnapshottedEvents = 0
+
+    let normalizePropertyName name = name
+
+    let findByName propertyName =
+        let propertyName = normalizePropertyName propertyName
+        state.properties
+        |> List.tryFind (fun p -> p.propertyName = propertyName)
 
     override this.OnActivateAsync() =
         task {
-            let key = this.GetPrimaryKeyString()
-            let! config = configLocator.getConfig key
-            let! snapshotStore' = config.snapshotStoreLocator.getSnapshotStore key
-            do snapshotStore <- snapshotStore'
-            let! messageStore' = config.messageStoreLocator.getMessageStore key
+            let configKey = this.GetPrimaryKeyString()
+            let! config = configLocator.getConfig configKey
+            let! messageStore' = config.messageStoreLocator.getMessageStore configKey
+            let! state', _ = EntityState.readEntity stateDef messageStore'
             do messageStore <- messageStore'
-            let! state' = SnapshottedEntityState.readEntity stateDef snapshotStore messageStore
             do state <- state'
-            do unsnapshottedEvents <- 0
         } :> Task
 
     interface IPropertiesManagerGrain with
         member this.GetPropertyNames () = task {
-            return state.properties |> List.map (fun p -> p.propertyName)
+            return
+                state.properties
+                |> List.map (fun p -> p.propertyName)
         }
 
         member this.CreateProperty propertyName = task {
-            return invalidOp "NotImplemented"
+            match findByName propertyName with
+            | Some _ ->
+                return raise <| PropertyManagerException PropertyNameAlreadyExists
+            | None ->
+                let property = {
+                    propertyName = normalizePropertyName propertyName
+                    propertyId = Guid.NewGuid()
+                }
+
+                do! EntityState.writeMessages stateDef messageStore [
+                    PropertyCreated(property.propertyName, property.propertyId)
+                ]
+
+                let manager = grainFactory.GetGrain<IPropertyManagerGrain>(property.propertyId)
+                do! manager.Initialize {
+                    propertyName = property.propertyName
+                    configKey = this.GetPrimaryKeyString()
+                }
+
+                return manager
         }
     
         member this.GetProperty propertyName = task {
-            return invalidOp "NotImplemented"
+            match findByName propertyName with
+            | Some property ->
+                let propertyName = normalizePropertyName propertyName
+
+                let manager = grainFactory.GetGrain<IPropertyManagerGrain>(property.propertyId)
+                do! manager.Initialize {
+                    propertyName = propertyName
+                    configKey = this.GetPrimaryKeyString()
+                }
+                return Some manager
+            | None ->
+                return None
         }

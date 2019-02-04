@@ -11,5 +11,5 @@ type ISnapshotStore =
     abstract saveSnapshot: Snapshot -> Async<unit>
     abstract removeSnapshot: unit -> Async<unit>
 
-type ISnapshotStoreLocator =
-    abstract getSnapshotStore: entityId: string -> Async<ISnapshotStore>
+type ISnapshotStoreLocator<'key> =
+    abstract getSnapshotStore: key: 'key -> Async<ISnapshotStore>

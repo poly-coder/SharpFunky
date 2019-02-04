@@ -49,7 +49,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "eventstore", "eventstore", 
 EndProject
 Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "EventStore.Abstractions", "eventstore\EventStore.Abstractions\EventStore.Abstractions.fsproj", "{4BEBFDE2-1B78-4F41-85D6-B33066100E7C}"
 EndProject
-Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "EventStore.Host", "EventStore\EventStore.Host\EventStore.Host.fsproj", "{AB53A738-6D63-48B4-B017-F76EF8C022AE}"
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "EventStore.OrleansHost", "EventStore\EventStore.OrleansHost\EventStore.OrleansHost.fsproj", "{AB53A738-6D63-48B4-B017-F76EF8C022AE}"
 EndProject
 Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "EventStore.CLI", "EventStore\EventStore.CLI\EventStore.CLI.fsproj", "{4ED7AB87-C8E2-4CDE-835C-C03AC62D99D9}"
 EndProject
@@ -59,9 +59,13 @@ Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "EventStore.Services", "Even
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EventStore.Protocols", "EventStore\EventStore.Protocols\EventStore.Protocols.csproj", "{025B8FF6-3652-46CA-93ED-4CA1626EAA90}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "EventStore.GrainInterfaces", "eventstore\EventStore.GrainInterfaces\EventStore.GrainInterfaces.fsproj", "{6E9B8D4A-B68C-490B-912F-C3FF6975DE24}"
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "EventStore.GrainInterfaces", "eventstore\EventStore.GrainInterfaces\EventStore.GrainInterfaces.fsproj", "{6E9B8D4A-B68C-490B-912F-C3FF6975DE24}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "EventStore.Grains", "eventStore\EventStore.Grains\EventStore.Grains.fsproj", "{3CCC1A1E-CBB7-415D-8CC0-3BDBED92E56C}"
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "EventStore.Grains", "eventStore\EventStore.Grains\EventStore.Grains.fsproj", "{3CCC1A1E-CBB7-415D-8CC0-3BDBED92E56C}"
+EndProject
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "EventStore.GrpcHost", "EventStore\EventStore.GrpcHost\EventStore.GrpcHost.fsproj", "{F3A00580-7E46-4303-B247-635862E1C48A}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "EventStore.WebHost", "eventstore\EventStore.WebHost\EventStore.WebHost.fsproj", "{8D12B7EA-EC6D-48E3-9A88-C99F2F8651FB}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -165,6 +169,14 @@ Global
 		{3CCC1A1E-CBB7-415D-8CC0-3BDBED92E56C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3CCC1A1E-CBB7-415D-8CC0-3BDBED92E56C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3CCC1A1E-CBB7-415D-8CC0-3BDBED92E56C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F3A00580-7E46-4303-B247-635862E1C48A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F3A00580-7E46-4303-B247-635862E1C48A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F3A00580-7E46-4303-B247-635862E1C48A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F3A00580-7E46-4303-B247-635862E1C48A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8D12B7EA-EC6D-48E3-9A88-C99F2F8651FB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8D12B7EA-EC6D-48E3-9A88-C99F2F8651FB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8D12B7EA-EC6D-48E3-9A88-C99F2F8651FB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8D12B7EA-EC6D-48E3-9A88-C99F2F8651FB}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -194,6 +206,8 @@ Global
 		{025B8FF6-3652-46CA-93ED-4CA1626EAA90} = {97979473-5B86-4ED9-8844-DB388F1DF67F}
 		{6E9B8D4A-B68C-490B-912F-C3FF6975DE24} = {97979473-5B86-4ED9-8844-DB388F1DF67F}
 		{3CCC1A1E-CBB7-415D-8CC0-3BDBED92E56C} = {97979473-5B86-4ED9-8844-DB388F1DF67F}
+		{F3A00580-7E46-4303-B247-635862E1C48A} = {97979473-5B86-4ED9-8844-DB388F1DF67F}
+		{8D12B7EA-EC6D-48E3-9A88-C99F2F8651FB} = {97979473-5B86-4ED9-8844-DB388F1DF67F}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {AA95AA36-9D50-4834-B4BB-BCCCA76D8D85}

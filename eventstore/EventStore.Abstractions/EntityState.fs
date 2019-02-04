@@ -15,20 +15,22 @@ module EntityState =
         initState
         (stateDef: #IEntityStateDefinition<_, _>)
         (messageStore: #IMessageStore) =
-        let rec buildState state nextSequence = async {
+        let rec loop count state nextSequence = async {
             let! segment = messageStore.readMessages nextSequence
-            let state' =
+            let messages =
                 segment.messages
                 |> Seq.bind stateDef.deserializeMessage
-                |> Seq.fold stateDef.applyMessage state
+                |> Seq.toArray
+            let state' = messages |> Seq.fold stateDef.applyMessage state
+            let count' = count + messages.Length
 
             match segment.nextSequence with
             | Some value ->
-                return! buildState state' value
+                return! loop count' state' value
             | None ->
-                return state'
+                return state', count'
         }
-        buildState initState initSequence
+        loop 0 initState initSequence
 
     let readEntity
         (stateDef: #IEntityStateDefinition<'state, 'message>)
@@ -37,6 +39,15 @@ module EntityState =
         let initSequence = 0UL
         return! buildFrom initSequence initState stateDef messageStore
     }
+
+    let writeMessages 
+        (stateDef: #IEntityStateDefinition<'state, 'message>)
+        (messageStore: #IMessageStore)
+        (messages: 'message list) = async {
+            let msgs = messages |> List.map stateDef.serializeMessage
+            let! result = messageStore.appendMessages msgs
+            return ()
+        }
 
 module SnapshottedEntityState =
     type ISnapshottedEntityStateDefinition<'state, 'message> =

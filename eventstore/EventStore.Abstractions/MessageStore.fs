@@ -20,6 +20,6 @@ type IMessageStore =
     abstract readMessages: fromSequence: uint64 -> Async<MessageSegment>
     abstract appendMessages: messages: Message list -> Async<AppendMessagesResult>
 
-type IMessageStoreLocator =
-    abstract getMessageStore: entityId: string -> Async<IMessageStore>
+type IMessageStoreLocator<'key> =
+    abstract getMessageStore: key: 'key -> Async<IMessageStore>
 
