@@ -72,11 +72,7 @@ module MessageStoreExtensions =
                     return result
                 } |> Async.AwaitTask
 
-    type MessageStoreLocatorGuidImpl
-        (
-            configKey: string,
-            grainFactory: IGrainFactory
-        ) =
+    type MessageStoreLocatorGuidImpl(configKey: string, grainFactory: IGrainFactory) =
         
         interface IMessageStoreLocator<Guid> with
             member this.getMessageStore key =
@@ -87,11 +83,7 @@ module MessageStoreExtensions =
                     return impl :> IMessageStore
                 } |> Async.AwaitTask
 
-    type MessageStoreLocatorStringImpl
-        (
-            configKey: string,
-            grainFactory: IGrainFactory
-        ) =
+    type MessageStoreLocatorStringImpl(configKey: string, grainFactory: IGrainFactory) =
         
         interface IMessageStoreLocator<string> with
             member this.getMessageStore key =

@@ -14,24 +14,48 @@ open Orleans.Runtime.Configuration
 open Orleans.Hosting
 open FSharp.Control.Tasks.V2
 
+[<Literal>]
+let REQUIRED = "REQUIRED"
+
+let readConfigSimpleMap configKey (config: #IConfigurationSection) defaultMap =
+    let configItem = config.GetSection(sprintf "Configs:%s" configKey) |> Option.ofObj
+    let defaultsItem = maybe {
+        let! configItem = configItem
+        let! useDefaults = configItem.["UseDefaults"] |> String.nonWhiteSpace
+        let section = config.GetSection(sprintf "Defaults:%s" useDefaults)
+        if isNull section then
+            invalidOp (sprintf "Missing configuration path %s:Defaults:%s" config.Path useDefaults)
+        return section
+    }
+
+    defaultMap
+    |> Seq.map (fun (key, value) ->
+        orElse {
+            return! configItem |> Option.bind (fun c -> c.[key] |> String.nonWhiteSpace)
+            return! defaultsItem |> Option.bind (fun c -> c.[key] |> String.nonWhiteSpace)
+        }
+        |> Option.matches (Tup2.withFst key) (fun() ->
+            match value with
+            | REQUIRED ->
+                invalidOp (sprintf "Missing configuration path %s:Configs:%s:%s" config.Path configKey key)
+            | value -> key, value
+        )
+    )
+    |> Map.ofSeq
+
 let createMessageStoreConfigLocator (config: #IConfigurationSection) (svc: IServiceProvider) =
     { new IMessageStoreGrainConfigLocator with
         member this.getConfig name = task {
-            let configItem = config.GetSection(sprintf "Configs:%s" name)
-            if isNull configItem then
-                return invalidOp (sprintf "Missing configuration path %s:Configs:%s" config.Path name)
-            else
-
-            let providerName = configItem.["UseProvider"]
-            let providerConfig = config.GetSection(sprintf "Providers:%s" providerName)
-            if isNull configItem then
-                return invalidOp (sprintf "Missing configuration path %s:Providers:%s" config.Path providerName)
-            else
-
-            let readLimit = Int32.parse <| providerConfig.["ReadLimit"]
+            let options =
+                [ "ReadLimit", "100"
+                  "StorageConnectionString", REQUIRED
+                  "TableName", REQUIRED
+                ]
+                |> readConfigSimpleMap name config
             let dataStreamOptions = AzureTableDataStreamOptions()
-            dataStreamOptions.StorageConnectionString <- providerConfig.["StorageConnectionString"]
-            dataStreamOptions.TableName <- providerConfig.["TableName"]
+            dataStreamOptions.StorageConnectionString <- options |> Map.find "StorageConnectionString"
+            dataStreamOptions.TableName <- options |> Map.find "TableName"
+            let readLimit = options |> Map.find "ReadLimit" |> Int32.parse
             let dataStream = AzureTableDataStream(dataStreamOptions) :> IBinaryDataStreamService
             return {
                 readLimit = readLimit
@@ -60,7 +84,7 @@ let buildSiloHost (config: #IConfiguration) =
             |> ignore)
         .ConfigureLogging(fun logging -> logging.AddConsole() |> ignore)
         .ConfigureServices(fun services ->
-            config.GetSection("InternalMessageStores")
+            config.GetSection("MessageStores")
                 |> createMessageStoreConfigLocator
                 |> services.AddSingleton<IMessageStoreGrainConfigLocator>
                 |> ignore

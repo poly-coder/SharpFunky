@@ -19,6 +19,7 @@
     <Compile Include="Lens.fs" />
     <Compile Include="Converter.fs" />
     <Compile Include="Seq.fs" />
+    <Compile Include="Tuples.fs" />
     <Compile Include="Option.fs" />
     <Compile Include="OptLens.fs" />
     <Compile Include="Result.fs" />
